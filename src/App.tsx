@@ -1,29 +1,30 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
-import { Suspense, Component, type ReactNode } from 'react';
+import { useEffect, Suspense, lazy, Component, type ReactNode } from 'react';
 import { ThemeProvider } from './ThemeContext';
 import { AuthProvider } from './AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import HomePage from './pages/HomePage';
-import ProjectsPage from './pages/ProjectsPage';
-import CoursesPage from './pages/CoursesPage';
-import InternshipsPage from './pages/InternshipsPage';
-import MentorsPage from './pages/MentorsPage';
-import LeaderboardPage from './pages/LeaderboardPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import CertificatePage from './pages/CertificatePage';
-import CompanyPortal from './pages/CompanyPortal';
-import AdminPortal from './pages/AdminPortal';
-import StudentPortal from './pages/StudentPortal';
-import CollegePortal from './pages/CollegePortal';
-import HowItWorksPage from './pages/HowItWorksPage';
-import PlacementSupportPage from './pages/PlacementSupportPage';
-import AlumniNetworkPage from './pages/AlumniNetworkPage';
 import AIChatbot from './components/AIChatbot';
-import CourseViewer from './pages/CourseViewer';
-import JobPortalPage from './pages/JobPortalPage';
+
+// ── Code-split every page — only loads JS when that route is visited ──
+const HomePage           = lazy(() => import('./pages/HomePage'));
+const ProjectsPage       = lazy(() => import('./pages/ProjectsPage'));
+const CoursesPage        = lazy(() => import('./pages/CoursesPage'));
+const InternshipsPage    = lazy(() => import('./pages/InternshipsPage'));
+const MentorsPage        = lazy(() => import('./pages/MentorsPage'));
+const LeaderboardPage    = lazy(() => import('./pages/LeaderboardPage'));
+const LoginPage          = lazy(() => import('./pages/LoginPage'));
+const RegisterPage       = lazy(() => import('./pages/RegisterPage'));
+const CertificatePage    = lazy(() => import('./pages/CertificatePage'));
+const CompanyPortal      = lazy(() => import('./pages/CompanyPortal'));
+const AdminPortal        = lazy(() => import('./pages/AdminPortal'));
+const StudentPortal      = lazy(() => import('./pages/StudentPortal'));
+const CollegePortal      = lazy(() => import('./pages/CollegePortal'));
+const HowItWorksPage     = lazy(() => import('./pages/HowItWorksPage'));
+const PlacementSupportPage = lazy(() => import('./pages/PlacementSupportPage'));
+const AlumniNetworkPage  = lazy(() => import('./pages/AlumniNetworkPage'));
+const CourseViewer       = lazy(() => import('./pages/CourseViewer'));
+const JobPortalPage      = lazy(() => import('./pages/JobPortalPage'));
 
 // ── Error Boundary — prevents full black screen on runtime errors ──
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -41,7 +42,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
           <button
             onClick={() => { localStorage.clear(); window.location.reload(); }}
             style={{ padding: '10px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
-            Clear Cache & Reload
+            Clear Cache &amp; Reload
           </button>
         </div>
       );
@@ -50,24 +51,37 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-function LoadingSpinner() {
+// ── Skeleton loader — shown while lazy chunks download ──
+function PageSkeleton() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 16, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', animation: 'floatY 1.5s ease-in-out infinite', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>NM</span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 14,
+          background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+          animation: 'floatY 1.2s ease-in-out infinite',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>NM</span>
         </div>
-        <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Loading…</p>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {[0, 0.15, 0.3].map((d, i) => (
+            <div key={i} style={{
+              width: 7, height: 7, borderRadius: '50%', background: '#7c3aed',
+              animation: `pulse 1s ease-in-out ${d}s infinite`,
+            }} />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Scroll to top on every navigation ──
+// ── Scroll to top on every navigation (instant — no scroll animation delay) ──
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    window.scrollTo(0, 0); // instant — no behavior:'smooth' which adds delay
   }, [pathname]);
   return null;
 }
@@ -78,10 +92,14 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <BrowserRouter>
-            <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', flexDirection: 'column', transition: 'background 0.3s ease, color 0.3s ease' }}>
+            <div style={{
+              background: 'var(--bg)', minHeight: '100vh',
+              display: 'flex', flexDirection: 'column',
+              transition: 'background 0.3s ease, color 0.3s ease',
+            }}>
               <ScrollToTop />
               <Navbar />
-              <Suspense fallback={<LoadingSpinner />}>
+              <Suspense fallback={<PageSkeleton />}>
                 <main style={{ flex: 1 }}>
                   <Routes>
                     <Route path="/"            element={<HomePage />} />
@@ -96,17 +114,13 @@ export default function App() {
                     <Route path="/how-it-works" element={<HowItWorksPage />} />
                     <Route path="/placement-support" element={<PlacementSupportPage />} />
                     <Route path="/alumni-network" element={<AlumniNetworkPage />} />
-                    {/* Role portals */}
                     <Route path="/portal/student"  element={<StudentPortal />} />
                     <Route path="/portal/company"  element={<CompanyPortal />} />
                     <Route path="/portal/college"  element={<CollegePortal />} />
                     <Route path="/portal/admin"    element={<AdminPortal />} />
-                    {/* Job portal */}
-                    <Route path="/jobs" element={<JobPortalPage />} />
-                    {/* Course viewer */}
+                    <Route path="/jobs"            element={<JobPortalPage />} />
                     <Route path="/learn/:courseId" element={<CourseViewer />} />
-                    {/* Fallback */}
-                    <Route path="*" element={<HomePage />} />
+                    <Route path="*"               element={<HomePage />} />
                   </Routes>
                 </main>
               </Suspense>

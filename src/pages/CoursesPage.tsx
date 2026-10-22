@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useDebounce } from '../hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -34,6 +35,7 @@ export default function CoursesPage() {
   const [activeCat, setActiveCat]   = useState('all');
   const [subcat,    setSubcat]      = useState('All Subcategories');
   const [q,         setQ]           = useState('');
+  const dQ                          = useDebounce(q, 180);
   const [sortBy,    setSortBy]      = useState('Latest');
   const [imgErr,    setImgErr]      = useState<Record<number, boolean>>({});
   const [wishlist,  setWishlist]    = useState<Set<number>>(new Set());
@@ -50,15 +52,15 @@ export default function CoursesPage() {
     let list = ALL_COURSES.filter(c => {
       if (activeCat !== 'all' && c.category !== activeCat) return false;
       if (subcat !== 'All Subcategories' && c.subcategory !== subcat) return false;
-      if (q && !c.title.toLowerCase().includes(q.toLowerCase()) &&
-               !c.instructor.toLowerCase().includes(q.toLowerCase()) &&
-               !c.subcategory.toLowerCase().includes(q.toLowerCase())) return false;
+      if (dQ && !c.title.toLowerCase().includes(dQ.toLowerCase()) &&
+               !c.instructor.toLowerCase().includes(dQ.toLowerCase()) &&
+               !c.subcategory.toLowerCase().includes(dQ.toLowerCase())) return false;
       return true;
     });
     if (sortBy === 'Top Rated')    list = [...list].sort((a,b) => b.rating - a.rating);
     if (sortBy === 'Most Students') list = [...list].sort((a,b) => b.students - a.students);
     return list;
-  }, [activeCat, subcat, q, sortBy]);
+  }, [activeCat, subcat, dQ, sortBy]);
 
   const activeCatObj = COURSE_CATEGORIES.find(c => c.id === activeCat)!;
   const subcatList   = activeCat === 'all' ? [] : (SUBCATS[activeCat] || []);

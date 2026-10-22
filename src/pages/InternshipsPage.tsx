@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useDebounce } from '../hooks';
 import { motion } from 'framer-motion';
 import { Search, MapPin, Clock, Users, Bookmark, Star, ChevronDown } from 'lucide-react';
 import { INTERNSHIPS, CATEGORIES } from '../data';
@@ -8,16 +9,19 @@ const TYPES = ['All Types','Paid','Certificate'];
 
 export default function InternshipsPage() {
   const [q, setQ]       = useState('');
+  const dQ               = useDebounce(q, 180);
   const [cat, setCat]   = useState('all');
   const [type, setType] = useState('All Types');
   const [applyItem, setApplyItem] = useState<typeof INTERNSHIPS[0] | null>(null);
+  const openApply  = useCallback((i: typeof INTERNSHIPS[0]) => setApplyItem(i), []);
+  const closeApply = useCallback(() => setApplyItem(null), []);
 
-  const filtered = INTERNSHIPS.filter(i => {
-    if (q && !i.title.toLowerCase().includes(q.toLowerCase()) && !i.company.toLowerCase().includes(q.toLowerCase())) return false;
+  const filtered = useMemo(() => INTERNSHIPS.filter(i => {
+    if (dQ && !i.title.toLowerCase().includes(dQ.toLowerCase()) && !i.company.toLowerCase().includes(dQ.toLowerCase())) return false;
     if (cat !== 'all' && i.category !== cat) return false;
     if (type !== 'All Types' && i.type !== type) return false;
     return true;
-  });
+  }), [dQ, cat, type]);
 
   return (
     <div className="page" style={{ minHeight:'100vh', paddingTop:60 }}>
@@ -86,7 +90,7 @@ export default function InternshipsPage() {
               initial={{ opacity:0, y:20 }}
               whileInView={{ opacity:1, y:0 }}
               viewport={{ once:true }}
-              transition={{ duration:0.45, delay:i*0.06 }}
+              transition={{ duration:0.38, delay:Math.min(i*0.03, 0.21) }}
               className="job-card"
               style={{ '--accent-color': item.color } as React.CSSProperties}>
 
@@ -128,7 +132,7 @@ export default function InternshipsPage() {
               <div style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
                 <button
                   className="btn btn-primary"
-                  onClick={() => setApplyItem(item)}
+                  onClick={() => openApply(item)}
                   style={{ display:'flex', alignItems:'center', gap:6, fontSize:13 }}>
                   Apply Now
                 </button>
@@ -141,17 +145,15 @@ export default function InternshipsPage() {
         </div>
       </div>
 
-      {applyItem && (
-        <ApplyModal
-          open={!!applyItem}
-          onClose={() => setApplyItem(null)}
-          type="internship"
-          itemId={applyItem.id}
-          itemTitle={applyItem.title}
-          itemCompany={applyItem.company}
-          color={applyItem.color}
-        />
-      )}
+      <ApplyModal
+        open={!!applyItem}
+        onClose={closeApply}
+        type="internship"
+        itemId={applyItem?.id ?? 0}
+        itemTitle={applyItem?.title ?? ''}
+        itemCompany={applyItem?.company ?? ''}
+        color={applyItem?.color}
+      />
     </div>
   );
 }

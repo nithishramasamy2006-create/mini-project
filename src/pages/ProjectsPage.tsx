@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useDebounce } from '../hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, X, ChevronDown, Award, Star, Clock, Users, TrendingUp, MapPin, Flame, Bookmark } from 'lucide-react';
 import { PROJECTS, CATEGORIES } from '../data';
@@ -10,15 +11,18 @@ const DIFF_COLOR: Record<string,string> = { Beginner:'#10b981', Intermediate:'#3
 
 export default function ProjectsPage() {
   const [q, setQ]       = useState('');
+  const dQ               = useDebounce(q, 180); // debounced query — used for filtering
   const [cat, setCat]   = useState('all');
   const [diff, setDiff] = useState('All Levels');
   const [sort, setSort] = useState('newest');
   const [ppo, setPpo]   = useState(false);
   const [applyItem, setApplyItem] = useState<typeof PROJECTS[0] | null>(null);
+  const openApply  = useCallback((p: typeof PROJECTS[0]) => setApplyItem(p), []);
+  const closeApply = useCallback(() => setApplyItem(null), []);
 
   const filtered = useMemo(() => {
     let list = PROJECTS.filter(p => {
-      if (q && !p.title.toLowerCase().includes(q.toLowerCase()) && !p.company.toLowerCase().includes(q.toLowerCase()) && !p.skills.some(s => s.toLowerCase().includes(q.toLowerCase()))) return false;
+      if (dQ && !p.title.toLowerCase().includes(dQ.toLowerCase()) && !p.company.toLowerCase().includes(dQ.toLowerCase()) && !p.skills.some(s => s.toLowerCase().includes(dQ.toLowerCase()))) return false;
       if (cat !== 'all' && p.category !== cat) return false;
       if (diff !== 'All Levels' && p.difficulty !== diff) return false;
       if (ppo && !p.ppo) return false;
@@ -27,7 +31,7 @@ export default function ProjectsPage() {
     if (sort === 'stipend') list = [...list].sort((a,b) => parseInt(b.stipend.replace(/\D/g,'')) - parseInt(a.stipend.replace(/\D/g,'')));
     if (sort === 'rating') list = [...list].sort((a,b) => b.rating - a.rating);
     return list;
-  }, [q, cat, diff, sort, ppo]);
+  }, [dQ, cat, diff, sort, ppo]);
 
   return (
     <div className="page" style={{ minHeight:'100vh', paddingTop:60 }}>
@@ -152,16 +156,16 @@ export default function ProjectsPage() {
             </div>
 
             {/* Grid */}
-            <AnimatePresence mode="wait">
-              {filtered.length>0 ? (
-                <motion.div key="grid" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-                  style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px,1fr))', gap:18 }}>
-                  {filtered.map((p,i)=>(
-                    <motion.article key={p.id}
-                      initial={{ opacity:0, y:28 }}
-                      whileInView={{ opacity:1, y:0 }}
-                      viewport={{ once:true, margin:'-40px' }}
-                      transition={{ duration:0.5, delay:i*0.06, ease:[0.22,1,0.36,1] }}
+              <AnimatePresence>
+                {filtered.length>0 ? (
+                  <motion.div key="grid" initial={{ opacity:0 }} animate={{ opacity:1 }}
+                    style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px,1fr))', gap:18 }}>
+                    {filtered.map((p,i)=>(
+                      <motion.article key={p.id}
+                        initial={{ opacity:0, y:20 }}
+                        whileInView={{ opacity:1, y:0 }}
+                        viewport={{ once:true, margin:'-40px' }}
+                        transition={{ duration:0.38, delay:Math.min(i*0.03, 0.24), ease:[0.22,1,0.36,1] }}
                       className="card-base"
                       style={{ display:'flex', flexDirection:'column', padding:0, overflow:'hidden' }}>
 
@@ -262,7 +266,7 @@ export default function ProjectsPage() {
                         <div style={{ display:'flex', gap:7, marginTop:'auto' }}>
                           <button
                             className="btn btn-primary"
-                            onClick={() => setApplyItem(p)}
+                          onClick={() => openApply(p)}
                             style={{ flex:1, fontSize:12.5, padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
                             <TrendingUp size={13} /> Apply Now
                           </button>
@@ -272,9 +276,9 @@ export default function ProjectsPage() {
                     </motion.article>
                   ))}
                 </motion.div>
-              ) : (
-                <motion.div key="empty" initial={{ opacity:0 }} animate={{ opacity:1 }}
-                  className="glass-heavy" style={{ borderRadius:20, padding:'64px 24px', textAlign:'center' }}>
+                ) : (
+                  <motion.div key="empty" initial={{ opacity:0 }} animate={{ opacity:1 }}
+                    className="glass-heavy" style={{ borderRadius:20, padding:'64px 24px', textAlign:'center' }}>
                   <div style={{ fontSize:48, marginBottom:16 }}>🔍</div>
                   <h3 className="font-display" style={{ fontWeight:700, color:'var(--text)', fontSize:20, marginBottom:8 }}>No projects match</h3>
                   <p style={{ color:'var(--text-2)', marginBottom:20 }}>Try adjusting your filters or search query</p>
@@ -290,17 +294,16 @@ export default function ProjectsPage() {
         @media (max-width: 860px) { #proj-sidebar { display: none !important; } }
       `}</style>
 
-      {applyItem && (
-        <ApplyModal
-          open={!!applyItem}
-          onClose={() => setApplyItem(null)}
-          type="project"
-          itemId={applyItem.id}
-          itemTitle={applyItem.title}
-          itemCompany={applyItem.company}
-          color={applyItem.color}
-        />
-      )}
+      {/* Always mounted — avoids re-mount flicker on open */}
+      <ApplyModal
+        open={!!applyItem}
+        onClose={closeApply}
+        type="project"
+        itemId={applyItem?.id ?? 0}
+        itemTitle={applyItem?.title ?? ''}
+        itemCompany={applyItem?.company ?? ''}
+        color={applyItem?.color}
+      />
     </div>
   );
 }

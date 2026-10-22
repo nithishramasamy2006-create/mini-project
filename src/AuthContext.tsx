@@ -85,28 +85,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token,   setToken]   = useState<string | null>(() => localStorage.getItem('nm_token'));
   const [loading, setLoading] = useState(true);
 
-  // ── Restore session on mount ─────────────────────────────
+  // ── Restore session on mount (with 4s timeout so app never hangs) ──
   useEffect(() => {
     const saved = localStorage.getItem('nm_token');
     if (!saved) { setLoading(false); return; }
-    fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${saved}` } })
+
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 4000); // 4s max wait
+
+    fetch(`${API}/auth/me`, {
+      headers: { Authorization: `Bearer ${saved}` },
+      signal: controller.signal,
+    })
       .then(r => r.json())
       .then(d => {
         if (d.success && d.user) {
-          // Ensure role always has a value (guard against stale sessions)
           if (!d.user.role) d.user.role = 'student';
           setUser(d.user);
         } else {
-          // Invalid token — clear it
           localStorage.removeItem('nm_token');
           setToken(null);
         }
       })
       .catch(() => {
-        localStorage.removeItem('nm_token');
-        setToken(null);
+        // Timeout or network error — keep token (server might be starting up)
+        // Don't clear token — user stays logged in optimistically
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      });
+
+    return () => { controller.abort(); clearTimeout(timeoutId); };
   }, []);
 
   // ── login: set auth state from user obj + token ──────────
