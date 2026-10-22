@@ -1,0 +1,113 @@
+import 'dotenv/config';
+import mongoose from 'mongoose';
+import { connectDB } from './config/db.js';
+import Project from './models/Project.js';
+import Course from './models/Course.js';
+import Internship from './models/Internship.js';
+import Mentor from './models/Mentor.js';
+import Leaderboard from './models/Leaderboard.js';
+
+// ── DATA ─────────────────────────────────────────────────────────
+
+const PROJECTS = [
+  { id:1, title:'AI-Powered Crop Disease Detection System', company:'AgriTech Solutions', companyLogo:'🌾', category:'ai', difficulty:'Intermediate', duration:'8 Weeks', stipend:'₹8,000/mo', skills:['Python','TensorFlow','OpenCV','Flask'], description:'Build a CNN model to detect diseases in rice and wheat crops using image classification. Deploy as a mobile-accessible REST API.', spots:5, enrolled:89, rating:4.9, reviews:34, mentor:'Dr. Anand Krishnan', mentorRole:'AI Research Lead', tags:['AI','Computer Vision','AgriTech'], featured:true, naan_aligned:true, ppo:false, deadline:'Dec 20, 2024', location:'Remote', color:'#7c3aed' },
+  { id:2, title:'Smart Campus ERP – Student Portal', company:'Zoho Corporation', companyLogo:'🔷', category:'fullstack', difficulty:'Intermediate', duration:'10 Weeks', stipend:'₹12,000/mo', skills:['React','Node.js','MySQL','REST API'], description:'Develop a modern student portal for campus ERP — attendance, grades, fee payments, and timetable management with real-time notifications.', spots:3, enrolled:142, rating:4.8, reviews:67, mentor:'Priya Venkatesh', mentorRole:'Sr. Full Stack Engineer', tags:['Full Stack','ERP','SaaS'], featured:true, naan_aligned:true, ppo:true, deadline:'Jan 10, 2025', location:'Chennai (Hybrid)', color:'#3b82f6' },
+  { id:3, title:'Real-Time Fraud Detection ML Pipeline', company:'Razorpay', companyLogo:'💳', category:'ai', difficulty:'Advanced', duration:'14 Weeks', stipend:'₹20,000/mo', skills:['Python','Kafka','Spark','TensorFlow'], description:'Engineer a production-grade fraud detection system processing 1M+ transactions/day using ensemble ML models and explainable AI.', spots:2, enrolled:212, rating:5.0, reviews:89, mentor:'Vikram Nair', mentorRole:'Head of AI/ML', tags:['ML','FinTech','Real-time'], featured:true, naan_aligned:true, ppo:true, deadline:'Dec 15, 2024', location:'Bangalore (On-site)', color:'#10b981' },
+  { id:4, title:'Blockchain Academic Credential Platform', company:'Infosys', companyLogo:'🔵', category:'fullstack', difficulty:'Advanced', duration:'12 Weeks', stipend:'₹15,000/mo', skills:['Solidity','React','Node.js','Web3.js'], description:'Build a decentralized credential verification system on Ethereum for Tamil Nadu university certificates.', spots:4, enrolled:134, rating:4.7, reviews:52, mentor:'Kavitha Sundaram', mentorRole:'Blockchain Architect', tags:['Web3','Blockchain','EdTech'], featured:false, naan_aligned:true, ppo:false, deadline:'Jan 5, 2025', location:'Remote', color:'#4f46e5' },
+  { id:5, title:'IoT Smart Energy Monitoring Dashboard', company:'ISRO', companyLogo:'🚀', category:'iot', difficulty:'Advanced', duration:'10 Weeks', stipend:'₹18,000/mo', skills:['IoT','Python','React','AWS IoT'], description:'Monitor solar panels and wind turbines across Tamil Nadu with real-time IoT data, predictive maintenance alerts, and energy optimization.', spots:6, enrolled:78, rating:4.9, reviews:28, mentor:'Suresh Balaji', mentorRole:'Satellite Systems Engineer', tags:['IoT','Renewable Energy','Cloud'], featured:false, naan_aligned:true, ppo:false, deadline:'Dec 28, 2024', location:'Chennai (Hybrid)', color:'#06b6d4' },
+  { id:6, title:'Tamil NLP Chatbot for Govt Services', company:'TCS', companyLogo:'🔷', category:'ai', difficulty:'Intermediate', duration:'8 Weeks', stipend:'₹10,000/mo', skills:['Python','NLP','FastAPI','React'], description:'Create a bilingual conversational AI supporting Tamil and English to help citizens access government schemes and services.', spots:8, enrolled:92, rating:4.8, reviews:41, mentor:'Anitha Krishnamurthy', mentorRole:'NLP Scientist', tags:['NLP','GovTech','Tamil AI'], featured:false, naan_aligned:true, ppo:true, deadline:'Jan 15, 2025', location:'Remote', color:'#7c3aed' },
+  { id:7, title:'Cloud-Native Microservices E-Commerce', company:'Freshworks', companyLogo:'🌿', category:'cloud', difficulty:'Expert', duration:'16 Weeks', stipend:'₹25,000/mo', skills:['Kubernetes','Docker','Go','AWS'], description:'Architect and implement a cloud-native e-commerce platform using microservices, service mesh, and Kubernetes orchestration on AWS.', spots:2, enrolled:167, rating:4.9, reviews:73, mentor:'Arjun Ramachandran', mentorRole:'Principal Cloud Architect', tags:['Cloud','DevOps','Kubernetes'], featured:true, naan_aligned:true, ppo:true, deadline:'Dec 10, 2024', location:'Bangalore (On-site)', color:'#06b6d4' },
+  { id:8, title:'AR Heritage Tourism App for Tamil Nadu', company:'OLA Electric', companyLogo:'⚡', category:'design', difficulty:'Intermediate', duration:'8 Weeks', stipend:'₹9,000/mo', skills:['Flutter','Unity AR','Figma','Firebase'], description:"Design and build an augmented reality mobile app showcasing Tamil Nadu's historical monuments with interactive 3D models and audio guides.", spots:7, enrolled:63, rating:4.6, reviews:22, mentor:'Divya Rajan', mentorRole:'Product Design Lead', tags:['AR','Design','Tourism'], featured:false, naan_aligned:true, ppo:false, deadline:'Jan 20, 2025', location:'Remote', color:'#ec4899' },
+];
+
+const COURSES = [
+  { id:1, title:'Complete React Developer Bootcamp 2024', instructor:'Priya Venkatesh', company:'Zoho', avatar:'P', rating:4.9, students:12400, hours:32, level:'Intermediate', price:'FREE', category:'fullstack', naan_certified:true, coverGradient:'linear-gradient(135deg,#1e3a5f,#0891b2)', coverIcon:'⚛️', skills:['React','Redux','TypeScript','REST API'], description:'Master React from fundamentals to advanced patterns. Build 10 real-world projects.', modules:24, projects:10 },
+  { id:2, title:'Python for AI & Machine Learning – Full Course', instructor:'Dr. Ramesh Kumar', company:'TCS', avatar:'D', rating:4.8, students:18700, hours:48, level:'Beginner', price:'FREE', category:'ai', naan_certified:true, coverGradient:'linear-gradient(135deg,#4c1d95,#f59e0b)', coverIcon:'🤖', skills:['Python','NumPy','Scikit-learn','TensorFlow'], description:'From Python basics to deploying ML models in production. Industry-aligned curriculum.', modules:36, projects:12 },
+  { id:3, title:'Data Analytics with Power BI & SQL', instructor:'Arun Prabhu', company:'Freshworks', avatar:'A', rating:4.7, students:9300, hours:28, level:'Beginner', price:'FREE', category:'data', naan_certified:true, coverGradient:'linear-gradient(135deg,#1e3a5f,#7c3aed)', coverIcon:'📊', skills:['SQL','Power BI','Excel','DAX'], description:'Master data visualization and business analytics with industry-standard tools.', modules:20, projects:8 },
+  { id:4, title:'Full Stack MERN — Build SaaS Products', instructor:'Kavitha Sundaram', company:'Infosys', avatar:'K', rating:4.9, students:14200, hours:60, level:'Intermediate', price:'FREE', category:'fullstack', naan_certified:true, coverGradient:'linear-gradient(135deg,#064e3b,#3b82f6)', coverIcon:'🌐', skills:['MongoDB','Express','React','Node.js'], description:'Build production-grade SaaS applications from design to deployment.', modules:45, projects:15 },
+  { id:5, title:'DevOps & Cloud Engineering with AWS', instructor:'Arjun Ramachandran', company:'Freshworks', avatar:'AR', rating:4.8, students:7800, hours:40, level:'Advanced', price:'FREE', category:'cloud', naan_certified:true, coverGradient:'linear-gradient(135deg,#0c4a6e,#0891b2)', coverIcon:'☁️', skills:['AWS','Docker','Kubernetes','CI/CD'], description:'Learn cloud infrastructure, container orchestration, and DevOps best practices.', modules:30, projects:9 },
+  { id:6, title:'UI/UX Design Masterclass with Figma', instructor:'Divya Rajan', company:'OLA', avatar:'D', rating:4.9, students:11500, hours:36, level:'Beginner', price:'FREE', category:'design', naan_certified:true, coverGradient:'linear-gradient(135deg,#4a044e,#ec4899)', coverIcon:'🎨', skills:['Figma','UX Research','Prototyping','Design Systems'], description:'Design stunning interfaces and master UX principles used by top product teams.', modules:28, projects:11 },
+];
+
+const INTERNSHIPS = [
+  { id:1, title:'Software Development Intern – Full Stack', company:'Zoho Corporation', logo:'🔷', category:'fullstack', location:'Chennai (Hybrid)', duration:'3 Months', stipend:'₹15,000/mo', deadline:'Dec 15, 2024', openings:20, type:'Paid', skills:['React','Node.js','MySQL'], ppo:true, featured:true, description:"Join Zoho's engineering team to build full-stack features for their SaaS products used by millions.", color:'#3b82f6' },
+  { id:2, title:'AI/ML Research Intern', company:'TCS Innovation Labs', logo:'🔷', category:'ai', location:'Chennai (On-site)', duration:'6 Months', stipend:'₹18,000/mo', deadline:'Nov 30, 2024', openings:8, type:'Paid', skills:['Python','TensorFlow','Research'], ppo:true, featured:true, description:'Work on cutting-edge AI research projects alongside PhD researchers and industry experts.', color:'#7c3aed' },
+  { id:3, title:'Cloud Infrastructure Intern', company:'Freshworks', logo:'🌿', category:'cloud', location:'Chennai (Remote)', duration:'4 Months', stipend:'₹12,000/mo', deadline:'Dec 28, 2024', openings:12, type:'Paid', skills:['AWS','Docker','Linux'], ppo:false, featured:false, description:'Help manage and optimize Freshworks cloud infrastructure serving 60,000+ customers.', color:'#06b6d4' },
+  { id:4, title:'Fintech Product Intern', company:'Razorpay', logo:'💳', category:'fullstack', location:'Bangalore (On-site)', duration:'6 Months', stipend:'₹22,000/mo', deadline:'Dec 5, 2024', openings:5, type:'Paid', skills:['React','Python','Payments API'], ppo:true, featured:true, description:"Build payment experiences for India's leading payment gateway processing ₹5L+ Cr annually.", color:'#10b981' },
+  { id:5, title:'IoT Systems Intern', company:'ISRO', logo:'🚀', category:'iot', location:'Chennai (On-site)', duration:'3 Months', stipend:'₹10,000/mo', deadline:'Jan 10, 2025', openings:15, type:'Certificate', skills:['Embedded C','Arduino','Python'], ppo:false, featured:false, description:"Work on satellite ground systems and IoT sensor networks used in India's space missions.", color:'#f59e0b' },
+  { id:6, title:'UX Research Intern', company:"Byju's", logo:'📚', category:'design', location:'Remote', duration:'2 Months', stipend:'₹8,000/mo', deadline:'Jan 20, 2025', openings:25, type:'Paid', skills:['Figma','User Research','Prototyping'], ppo:false, featured:false, description:'Conduct user research and design user-centered experiences for 150M+ learners.', color:'#ec4899' },
+];
+
+const MENTORS = [
+  { id:1, name:'Dr. Ramesh Kumar', role:'Senior AI Engineer', company:'TCS Innovation Labs', avatar:'R', avatarGrad:'linear-gradient(135deg,#f97316,#ef4444)', skills:['Python','Deep Learning','NLP','PyTorch'], rating:4.9, mentees:84, projects:28, sessions:420, domains:['AI & ML','Data Science'], verified:true, available:true, bio:'15+ years in AI research and development. Former Google Brain contributor. PhD from IIT Madras.' },
+  { id:2, name:'Priya Venkatesh', role:'Sr. Full Stack Engineer', company:'Zoho', avatar:'P', avatarGrad:'linear-gradient(135deg,#7c3aed,#4f46e5)', skills:['React','Node.js','TypeScript','PostgreSQL'], rating:4.8, mentees:67, projects:22, sessions:310, domains:['Full Stack','Cloud'], verified:true, available:true, bio:'10 years building SaaS at Zoho. Open source contributor. Speaker at ReactConf India.' },
+  { id:3, name:'Arjun Ramachandran', role:'Principal Cloud Architect', company:'Freshworks', avatar:'A', avatarGrad:'linear-gradient(135deg,#0891b2,#3b82f6)', skills:['AWS','Kubernetes','Terraform','Go'], rating:4.9, mentees:52, projects:18, sessions:280, domains:['Cloud & DevOps','System Design'], verified:true, available:false, bio:'AWS Solutions Architect Professional. Built cloud infra serving 60K+ companies.' },
+  { id:4, name:'Kavitha Sundaram', role:'Blockchain Architect', company:'Infosys', avatar:'K', avatarGrad:'linear-gradient(135deg,#059669,#0891b2)', skills:['Solidity','Web3.js','Ethereum','Hyperledger'], rating:4.7, mentees:41, projects:15, sessions:195, domains:['Blockchain','Full Stack'], verified:true, available:true, bio:'Pioneer in enterprise blockchain solutions. 8 years in DeFi and supply chain applications.' },
+  { id:5, name:'Divya Rajan', role:'Product Design Lead', company:'OLA', avatar:'D', avatarGrad:'linear-gradient(135deg,#ec4899,#7c3aed)', skills:['Figma','User Research','Motion Design','Design Systems'], rating:4.9, mentees:73, projects:30, sessions:365, domains:['UI/UX Design','Product Management'], verified:true, available:true, bio:'Former Apple design team. Built design systems used by 50M+ users across OLA products.' },
+  { id:6, name:'Vikram Nair', role:'Head of AI/ML', company:'Razorpay', avatar:'V', avatarGrad:'linear-gradient(135deg,#f59e0b,#ef4444)', skills:['MLOps','Fraud Detection','Kafka','Feature Engineering'], rating:5.0, mentees:38, projects:14, sessions:210, domains:['AI & ML','FinTech'], verified:true, available:false, bio:'Built fraud detection systems processing ₹5L Cr annually. IIT Bombay alumnus.' },
+];
+
+const LEADERBOARD = [
+  { rank:1,  name:'Aravind K.',    college:'Anna University',  points:9820, badge:'B.E. CSE',  avatar:'A', grad:'linear-gradient(135deg,#f97316,#ef4444)',  projects:4, courses:12, streak:45 },
+  { rank:2,  name:'Priya M.',      college:'NIT Trichy',       points:9450, badge:'B.Tech IT', avatar:'P', grad:'linear-gradient(135deg,#7c3aed,#4f46e5)', projects:3, courses:10, streak:38 },
+  { rank:3,  name:'Rajesh S.',     college:'SRM University',   points:9120, badge:'B.Sc. CS',  avatar:'R', grad:'linear-gradient(135deg,#059669,#0891b2)',  projects:3, courses:9,  streak:32 },
+  { rank:4,  name:'Soundarya V.',  college:'Amrita College',   points:8890, badge:'B.E. IT',   avatar:'S', grad:'linear-gradient(135deg,#ec4899,#7c3aed)',  projects:2, courses:11, streak:28 },
+  { rank:5,  name:'Karthik D.',    college:'VIT Chennai',      points:8640, badge:'M.Tech',    avatar:'K', grad:'linear-gradient(135deg,#0891b2,#3b82f6)',  projects:4, courses:8,  streak:25 },
+  { rank:6,  name:'Meena R.',      college:'PSG Tech',         points:8310, badge:'B.E. ECE',  avatar:'M', grad:'linear-gradient(135deg,#f59e0b,#ef4444)',  projects:2, courses:10, streak:21 },
+  { rank:7,  name:'Dhinesh L.',    college:'CIT Coimbatore',   points:7980, badge:'B.E. CSE',  avatar:'D', grad:'linear-gradient(135deg,#7c3aed,#ec4899)',  projects:3, courses:7,  streak:18 },
+  { rank:8,  name:'Ananya P.',     college:'SSN College',      points:7650, badge:'B.Tech',    avatar:'A', grad:'linear-gradient(135deg,#059669,#3b82f6)',  projects:2, courses:9,  streak:15 },
+  { rank:9,  name:'Vinoth M.',     college:'Kongu Engg.',      points:7320, badge:'B.E. EEE',  avatar:'V', grad:'linear-gradient(135deg,#0891b2,#7c3aed)',  projects:2, courses:8,  streak:12 },
+  { rank:10, name:'Lavanya T.',    college:'Sathyabama',       points:6990, badge:'B.E. CSE',  avatar:'L', grad:'linear-gradient(135deg,#ec4899,#f97316)',  projects:1, courses:10, streak:10 },
+];
+
+// ── SEED ─────────────────────────────────────────────────────────
+
+async function seed() {
+  try {
+    await connectDB();
+    console.log('\n🌱 Starting database seed...\n');
+
+    // Clear existing data
+    await Promise.all([
+      Project.deleteMany({}),
+      Course.deleteMany({}),
+      Internship.deleteMany({}),
+      Mentor.deleteMany({}),
+      Leaderboard.deleteMany({}),
+    ]);
+    console.log('🗑️  Cleared existing collections');
+
+    // Insert all data
+    await Project.insertMany(PROJECTS);
+    console.log(`✅ Inserted ${PROJECTS.length} projects`);
+
+    await Course.insertMany(COURSES);
+    console.log(`✅ Inserted ${COURSES.length} courses`);
+
+    await Internship.insertMany(INTERNSHIPS);
+    console.log(`✅ Inserted ${INTERNSHIPS.length} internships`);
+
+    await Mentor.insertMany(MENTORS);
+    console.log(`✅ Inserted ${MENTORS.length} mentors`);
+
+    await Leaderboard.insertMany(LEADERBOARD);
+    console.log(`✅ Inserted ${LEADERBOARD.length} leaderboard entries`);
+
+    console.log('\n🎉 Database seeded successfully!\n');
+    console.log('📊 Collections in MongoDB "naanmudhalvan" database:');
+    console.log('   • projects     →', PROJECTS.length, 'documents');
+    console.log('   • courses      →', COURSES.length, 'documents');
+    console.log('   • internships  →', INTERNSHIPS.length, 'documents');
+    console.log('   • mentors      →', MENTORS.length, 'documents');
+    console.log('   • leaderboards →', LEADERBOARD.length, 'documents');
+    console.log('\n🔗 Open MongoDB Compass and connect to:');
+    console.log('   mongodb://localhost:27017\n');
+
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Seed error:', err);
+    process.exit(1);
+  }
+}
+
+seed();
