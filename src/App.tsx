@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, Suspense, lazy, Component, type ReactNode } from 'react';
 import { ThemeProvider } from './ThemeContext';
 import { AuthProvider } from './AuthContext';
@@ -6,7 +6,6 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AIChatbot from './components/AIChatbot';
 
-// ── Code-split every page ─────────────────────────────────────────────────────
 const HomePage           = lazy(() => import('./pages/HomePage'));
 const ProjectsPage       = lazy(() => import('./pages/ProjectsPage'));
 const CoursesPage        = lazy(() => import('./pages/CoursesPage'));
@@ -28,7 +27,7 @@ const JobPortalPage      = lazy(() => import('./pages/JobPortalPage'));
 const EventsPage         = lazy(() => import('./pages/EventsPage'));
 const ExamPortalPage     = lazy(() => import('./pages/ExamPortalPage'));
 
-// ── Error Boundary ────────────────────────────────────────────────────────────
+// Error Boundary
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
   static getDerivedStateFromError(error: Error) { return { error }; }
@@ -36,11 +35,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     if (this.state.error) {
       return (
         <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0a0a0f', flexDirection:'column', gap:20, padding:32 }}>
-          <div style={{ fontSize:48 }}>⚠️</div>
+          <div style={{ fontSize:48 }}>{'⚠️'}</div>
           <h2 style={{ color:'#fff', fontSize:22, fontWeight:700, margin:0 }}>Something went wrong</h2>
-          <p style={{ color:'#888', fontSize:14, textAlign:'center', maxWidth:400 }}>
-            {(this.state.error as Error).message}
-          </p>
+          <p style={{ color:'#888', fontSize:14, textAlign:'center', maxWidth:400 }}>{(this.state.error as Error).message}</p>
           <button onClick={() => { localStorage.clear(); window.location.reload(); }}
             style={{ padding:'10px 28px', borderRadius:12, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff', fontWeight:700, fontSize:14, border:'none', cursor:'pointer' }}>
             Clear Cache &amp; Reload
@@ -52,7 +49,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-// ── Skeleton loader ───────────────────────────────────────────────────────────
+// Skeleton
 function PageSkeleton() {
   return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)' }}>
@@ -70,14 +67,14 @@ function PageSkeleton() {
   );
 }
 
-// ── Scroll-to-top on navigation ───────────────────────────────────────────────
+// Scroll to top
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 }
 
-// ── Role → portal path ────────────────────────────────────────────────────────
+// Role portal map
 const ROLE_PORTAL: Record<string, string> = {
   admin:   '/portal/admin',
   company: '/portal/company',
@@ -85,7 +82,6 @@ const ROLE_PORTAL: Record<string, string> = {
   student: '/portal/student',
 };
 
-/** Read stored role from localStorage — safe synchronous read */
 function storedRole(): string {
   try {
     const raw = localStorage.getItem('nm_user');
@@ -93,39 +89,21 @@ function storedRole(): string {
   } catch { return ''; }
 }
 
-// ── RoleRoute ─────────────────────────────────────────────────────────────────
-// Wraps every student-only / public page.
-// Admin / Company / College users are INSTANTLY redirected to their portal.
+// RoleRoute — student-only pages. Non-students get Navigate redirect (SPA, no reload).
 function RoleRoute({ element }: { element: JSX.Element }) {
   const role = storedRole();
-  if (role && role !== 'student') {
-    window.location.replace(ROLE_PORTAL[role] || '/login');
-    return (
-      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)', flexDirection:'column', gap:16 }}>
-        <div style={{ fontSize:48 }}>
-          {role === 'admin' ? '🛡️' : role === 'company' ? '🏢' : '🏫'}
-        </div>
-        <div style={{ fontWeight:700, fontSize:16, color:'var(--text)' }}>Redirecting to your portal…</div>
-      </div>
-    );
-  }
+  if (role && role !== 'student') return <Navigate to={ROLE_PORTAL[role] || '/login'} replace />;
   return element;
 }
 
-// ── PortalRoute ───────────────────────────────────────────────────────────────
-// Ensures only the matching role can open a given portal route.
-// Wrong-role users are redirected to their own portal. Unauthenticated → /login.
+// PortalRoute — portal pages. Wrong role gets Navigate redirect. No user -> login.
 function PortalRoute({ allowedRole, element }: { allowedRole: string; element: JSX.Element }) {
   const role = storedRole();
-  if (!role) { window.location.replace('/login'); return null; }
-  if (role !== allowedRole) {
-    window.location.replace(ROLE_PORTAL[role] || '/');
-    return null;
-  }
+  if (!role) return <Navigate to="/login" replace />;
+  if (role !== allowedRole) return <Navigate to={ROLE_PORTAL[role] || '/'} replace />;
   return element;
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <ErrorBoundary>
@@ -138,7 +116,7 @@ export default function App() {
               <Suspense fallback={<PageSkeleton />}>
                 <main style={{ flex:1 }}>
                   <Routes>
-                    {/* ── Student-only / public pages (RoleRoute guards) ─── */}
+                    {/* Student-only / public pages */}
                     <Route path="/"                  element={<RoleRoute element={<HomePage />} />} />
                     <Route path="/projects"          element={<RoleRoute element={<ProjectsPage />} />} />
                     <Route path="/courses"           element={<RoleRoute element={<CoursesPage />} />} />
@@ -154,17 +132,17 @@ export default function App() {
                     <Route path="/exams"             element={<RoleRoute element={<ExamPortalPage />} />} />
                     <Route path="/learn/:courseId"   element={<RoleRoute element={<CourseViewer />} />} />
 
-                    {/* ── Auth pages — open to all ─────────────────────────── */}
+                    {/* Auth pages — open to all */}
                     <Route path="/login"    element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
 
-                    {/* ── Portal pages — role-locked (PortalRoute guards) ─── */}
+                    {/* Portal pages — role-locked */}
                     <Route path="/portal/student" element={<PortalRoute allowedRole="student" element={<StudentPortal />} />} />
                     <Route path="/portal/company" element={<PortalRoute allowedRole="company" element={<CompanyPortal />} />} />
                     <Route path="/portal/college" element={<PortalRoute allowedRole="college" element={<CollegePortal />} />} />
                     <Route path="/portal/admin"   element={<PortalRoute allowedRole="admin"   element={<AdminPortal />} />} />
 
-                    {/* ── Catch-all ─────────────────────────────────────────── */}
+                    {/* Catch-all */}
                     <Route path="*" element={<RoleRoute element={<HomePage />} />} />
                   </Routes>
                 </main>

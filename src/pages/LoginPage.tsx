@@ -27,19 +27,25 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email.trim() || !password)  { setError('Email and password are required.'); return; }
+    if (!email.trim() || !password) { setError('Email and password are required.'); return; }
     setLoading(true);
     try {
       const result = await loginWithCredentials(email, password, portal);
       if (result.success) {
-        navigate(rolePortal(result.role || portal));
-      } else {
-        // If role mismatch, tell the user which portal to use
-        if (result.role && result.role !== portal) {
-          setError(`This account is registered as "${result.role}". Please select the ${result.role.charAt(0).toUpperCase() + result.role.slice(1)} portal tab.`);
+        // Directly navigate to their portal — no intermediate redirect
+        navigate(rolePortal(result.role || portal), { replace: true });
+      } else if (result.role && result.role !== portal) {
+        // Auto-switch to the correct portal tab and re-login seamlessly
+        setPortal(result.role);
+        setError('');
+        const retry = await loginWithCredentials(email, password, result.role);
+        if (retry.success) {
+          navigate(rolePortal(result.role), { replace: true });
         } else {
-          setError(result.message);
+          setError(retry.message);
         }
+      } else {
+        setError(result.message);
       }
     } catch {
       setError('Cannot connect to server. Make sure the backend is running on port 5000.');
