@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PlusCircle, Edit3, Trash2, ToggleLeft, ToggleRight, Search, X, Save, ChevronDown } from 'lucide-react';
+import type { ContentType, FieldDef } from '../portalData';
 import {
-  ContentType, FieldDef, FORM_FIELDS, TYPE_META, blankForm,
+  FORM_FIELDS, TYPE_META, blankForm,
   portalGetAll, portalGetByAuthor, portalCreate, portalUpdate,
   portalDelete, portalToggleStatus,
 } from '../portalData';
