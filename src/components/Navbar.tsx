@@ -51,14 +51,20 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Nav Links */}
+          {/* Nav Links — student portal only */}
           <div className="nav-links">
-            {NAV_ITEMS.map(item => (
+            {(!user || userRole === 'student') && NAV_ITEMS.map(item => (
               <NavLink key={item.path} to={item.path} end={item.path === '/'}
                 className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
                 {item.label}
               </NavLink>
             ))}
+            {/* Non-student portal shortcut label */}
+            {user && userRole !== 'student' && (
+              <span style={{ fontSize:12.5, fontWeight:700, color:'var(--text-3)', padding:'4px 12px', borderRadius:999, background:'var(--bg-2)', border:'1px solid var(--border)', letterSpacing:'0.03em' }}>
+                {userRole === 'admin' ? '🛡️ Admin Portal' : userRole === 'company' ? '🏢 Company Portal' : '🏫 College Portal'}
+              </span>
+            )}
           </div>
 
           {/* Right */}
@@ -150,7 +156,7 @@ export default function Navbar() {
             className="glass-heavy"
             style={{ position: 'fixed', top: 60, left: 0, right: 0, zIndex: 99, padding: '14px 20px 18px', borderBottom: '1px solid var(--border-2)' }}>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 14 }}>
-              {NAV_ITEMS.map(item => (
+              {(!user || userRole === 'student') && NAV_ITEMS.map(item => (
                 <NavLink key={item.path} to={item.path} end={item.path === '/'} onClick={() => setOpen(false)}
                   className={({ isActive }) => `s-item${isActive ? ' on' : ''}`}>
                   {item.label}
