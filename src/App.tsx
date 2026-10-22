@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, Suspense, lazy, Component, type ReactNode } from 'react';
 import { ThemeProvider } from './ThemeContext';
-import { AuthProvider } from './AuthContext';
+import { AuthProvider, useAuth } from './AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AIChatbot from './components/AIChatbot';
@@ -27,7 +27,7 @@ const JobPortalPage      = lazy(() => import('./pages/JobPortalPage'));
 const EventsPage         = lazy(() => import('./pages/EventsPage'));
 const ExamPortalPage     = lazy(() => import('./pages/ExamPortalPage'));
 
-// Error Boundary
+// ── Error Boundary ────────────────────────────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
   static getDerivedStateFromError(error: Error) { return { error }; }
@@ -49,7 +49,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-// Skeleton
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 function PageSkeleton() {
   return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)' }}>
@@ -67,14 +67,14 @@ function PageSkeleton() {
   );
 }
 
-// Scroll to top
+// ── Scroll to top ─────────────────────────────────────────────────────────────
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 }
 
-// Role portal map
+// ── Role → portal map ─────────────────────────────────────────────────────────
 const ROLE_PORTAL: Record<string, string> = {
   admin:   '/portal/admin',
   company: '/portal/company',
@@ -82,28 +82,38 @@ const ROLE_PORTAL: Record<string, string> = {
   student: '/portal/student',
 };
 
-function storedRole(): string {
-  try {
-    const raw = localStorage.getItem('nm_user');
-    return raw ? (JSON.parse(raw)?.role || '') : '';
-  } catch { return ''; }
-}
-
-// RoleRoute — student-only pages. Non-students get Navigate redirect (SPA, no reload).
+// ── RoleRoute ─────────────────────────────────────────────────────────────────
+// Student-only / public pages.
+// If a logged-in non-student visits: redirect them to their portal.
+// While auth is loading: show skeleton (prevents flash of student content).
 function RoleRoute({ element }: { element: JSX.Element }) {
-  const role = storedRole();
-  if (role && role !== 'student') return <Navigate to={ROLE_PORTAL[role] || '/login'} replace />;
+  const { user, loading } = useAuth();
+
+  // Still resolving auth — show loading screen so student content never flashes
+  if (loading) return <PageSkeleton />;
+
+  // Non-student logged in → send to their portal immediately
+  if (user && user.role !== 'student') {
+    return <Navigate to={ROLE_PORTAL[user.role] || '/login'} replace />;
+  }
+
   return element;
 }
 
-// PortalRoute — portal pages. Wrong role gets Navigate redirect. No user -> login.
+// ── PortalRoute ───────────────────────────────────────────────────────────────
+// Portal pages — only the matching role can access.
+// No auth → /login. Wrong role → their own portal.
 function PortalRoute({ allowedRole, element }: { allowedRole: string; element: JSX.Element }) {
-  const role = storedRole();
-  if (!role) return <Navigate to="/login" replace />;
-  if (role !== allowedRole) return <Navigate to={ROLE_PORTAL[role] || '/'} replace />;
+  const { user, loading } = useAuth();
+
+  if (loading) return <PageSkeleton />;
+  if (!user)   return <Navigate to="/login" replace />;
+  if (user.role !== allowedRole) return <Navigate to={ROLE_PORTAL[user.role] || '/'} replace />;
+
   return element;
 }
 
+// ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <ErrorBoundary>
@@ -116,7 +126,7 @@ export default function App() {
               <Suspense fallback={<PageSkeleton />}>
                 <main style={{ flex:1 }}>
                   <Routes>
-                    {/* Student-only / public pages */}
+                    {/* ── Student-only / public pages ───────────────── */}
                     <Route path="/"                  element={<RoleRoute element={<HomePage />} />} />
                     <Route path="/projects"          element={<RoleRoute element={<ProjectsPage />} />} />
                     <Route path="/courses"           element={<RoleRoute element={<CoursesPage />} />} />
@@ -132,17 +142,17 @@ export default function App() {
                     <Route path="/exams"             element={<RoleRoute element={<ExamPortalPage />} />} />
                     <Route path="/learn/:courseId"   element={<RoleRoute element={<CourseViewer />} />} />
 
-                    {/* Auth pages — open to all */}
+                    {/* ── Auth pages — open to all ───────────────────── */}
                     <Route path="/login"    element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
 
-                    {/* Portal pages — role-locked */}
+                    {/* ── Portal pages — role-locked ─────────────────── */}
                     <Route path="/portal/student" element={<PortalRoute allowedRole="student" element={<StudentPortal />} />} />
                     <Route path="/portal/company" element={<PortalRoute allowedRole="company" element={<CompanyPortal />} />} />
                     <Route path="/portal/college" element={<PortalRoute allowedRole="college" element={<CollegePortal />} />} />
                     <Route path="/portal/admin"   element={<PortalRoute allowedRole="admin"   element={<AdminPortal />} />} />
 
-                    {/* Catch-all */}
+                    {/* ── Catch-all ──────────────────────────────────── */}
                     <Route path="*" element={<RoleRoute element={<HomePage />} />} />
                   </Routes>
                 </main>
