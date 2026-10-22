@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,11 +7,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import ContentManager from '../components/ContentManager';
-import { portalGetByAuthor, portalGetAll } from '../portalData';
-import {
-  portalAppGetByAuthor, portalAppUpdateStatus, portalAppDelete,
-  workflowFor, statusColor, type PortalApplication
-} from '../portalApplications';
+import ApplicationAcceptancePanel from '../components/ApplicationAcceptancePanel';
+import { portalGetByAuthor } from '../portalData';
+import { portalAppGetByAuthor } from '../portalApplications';
 
 type Tab = 'dashboard' | 'applications' | 'projects' | 'internships' | 'jobs' | 'events' | 'profile';
 
@@ -125,19 +123,13 @@ export default function CompanyPortal() {
   const navigate = useNavigate();
 
   const [tab,      setTab]     = useState<Tab>('dashboard');
-  const [apps,     setApps]    = useState<PortalApplication[]>([]);
-  const [q,        setQ]       = useState('');
-  const [typeF,    setTypeF]   = useState('all');
-  const [statusF,  setStatusF] = useState('all');
   const [saving,   setSaving]  = useState(false);
   const [savedMsg, setSavedMsg]= useState('');
   const [pf,       setPf]      = useState<Record<string,any>>({});
 
-  const companyId = ((user as any)?.companyName || user?.email || 'company').toLowerCase().replace(/\s+/g,'-');
-
-  const loadApps = useCallback(() => {
-    setApps(portalAppGetByAuthor(companyId));
-  }, [companyId]);
+  const companyId = useMemo(() =>
+    ((user as any)?.companyName || user?.email || 'company').toLowerCase().replace(/\s+/g,'-'),
+  [user]);
 
   useEffect(() => {
     if (!user || user.role !== 'company') { navigate('/login'); return; }
@@ -150,38 +142,19 @@ export default function CompanyPortal() {
       hrPhone:     (user as any).hrPhone     || '',
       bio:         (user as any).bio         || '',
     });
-    loadApps();
   }, [user]);
 
-  // Live content counts
-  const myProjects    = useMemo(() => portalGetByAuthor('project',    companyId).length, [tab]);
-  const myInternships = useMemo(() => portalGetByAuthor('internship', companyId).length, [tab]);
-  const myJobs        = useMemo(() => portalGetByAuthor('job',        companyId).length, [tab]);
-  const myEvents      = useMemo(() => portalGetByAuthor('event',      companyId).length, [tab]);
+  // Live content counts (re-compute per tab change)
+  const myProjects    = useMemo(() => portalGetByAuthor('project',    companyId).length, [tab, companyId]);
+  const myInternships = useMemo(() => portalGetByAuthor('internship', companyId).length, [tab, companyId]);
+  const myJobs        = useMemo(() => portalGetByAuthor('job',        companyId).length, [tab, companyId]);
+  const myEvents      = useMemo(() => portalGetByAuthor('event',      companyId).length, [tab, companyId]);
 
-  const filtered = useMemo(() => {
-    let list = [...apps];
-    if (typeF   !== 'all') list = list.filter(a => a.type   === typeF);
-    if (statusF !== 'all') list = list.filter(a => a.status === statusF);
-    if (q) {
-      const ql = q.toLowerCase();
-      list = list.filter(a =>
-        a.studentName.toLowerCase().includes(ql) ||
-        a.itemTitle.toLowerCase().includes(ql)   ||
-        a.studentEmail.toLowerCase().includes(ql)
-      );
-    }
-    return list;
-  }, [apps, typeF, statusF, q]);
-
-  const updateStatus = (id: number, status: any) => {
-    portalAppUpdateStatus(id, status);
-    loadApps();
-  };
-  const deleteApp = (id: number) => {
-    portalAppDelete(id);
-    loadApps();
-  };
+  // Live application stats for dashboard
+  const apps          = useMemo(() => portalAppGetByAuthor(companyId), [tab, companyId]);
+  const pendingCount  = apps.filter(a => a.status === 'pending').length;
+  const hiredCount    = apps.filter(a => a.status === 'hired').length;
+  const totalContent  = myProjects + myInternships + myJobs + myEvents;
 
   const saveProfile = async () => {
     setSaving(true);
@@ -224,7 +197,7 @@ export default function CompanyPortal() {
 
         <nav style={{ flex:1 }}>
           {NAV.map(n => (
-            <button key={n.id} onClick={() => { setTab(n.id); if(n.id==='applications') loadApps(); }}
+            <button key={n.id} onClick={() => setTab(n.id)}
               style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:2, fontSize:13, fontWeight:tab===n.id?700:500, color:tab===n.id?'#3b82f6':'var(--text-2)', background:tab===n.id?'rgba(59,130,246,0.1)':'transparent', border:'none', cursor:'pointer', textAlign:'left', borderLeft:tab===n.id?'3px solid #3b82f6':'3px solid transparent', transition:'all 0.15s' }}>
               <span style={{ fontSize:13 }}>{n.icon}</span>
               <span style={{ flex:1 }}>{n.label}</span>
@@ -321,50 +294,16 @@ export default function CompanyPortal() {
         {/* ── APPLICATIONS ── */}
         {tab === 'applications' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-              <div>
-                <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Applications</h2>
-                <p style={{ fontSize:13, color:'var(--text-3)' }}>All applications to your job, internship, project, and event listings</p>
-              </div>
-              <button onClick={loadApps} style={{ padding:'8px 14px', borderRadius:10, background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.2)', color:'#3b82f6', fontSize:12.5, fontWeight:700, cursor:'pointer' }}>
-                🔄 Refresh
-              </button>
-            </div>
-
-            {/* Filters */}
-            <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
-              <div style={{ position:'relative', flex:1, minWidth:200 }}>
-                <Search size={13} style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'var(--text-3)', pointerEvents:'none' }}/>
-                <input className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search applicant, role…" style={{ paddingLeft:34, fontSize:13 }}/>
-              </div>
-              <select className="inp" value={typeF} onChange={e=>setTypeF(e.target.value)} style={{ fontSize:12.5, width:'auto' }}>
-                <option value="all">All Types</option>
-                {['job','internship','project','event'].map(t=><option key={t} value={t}>{TYPE_ICON[t]} {t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
-              </select>
-              <select className="inp" value={statusF} onChange={e=>setStatusF(e.target.value)} style={{ fontSize:12.5, width:'auto' }}>
-                <option value="all">All Status</option>
-                {['pending','reviewed','shortlisted','interview','hired','rejected','registered','confirmed','cancelled'].map(s=>(
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-
-            {apps.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'60px 20px', color:'var(--text-3)' }}>
-                <div style={{ fontSize:52, marginBottom:14 }}>📭</div>
-                <h3 style={{ fontWeight:700, fontSize:18, color:'var(--text)', marginBottom:8 }}>No applications yet</h3>
-                <p style={{ fontSize:14 }}>Post jobs, internships, or projects so students can apply</p>
-                <button onClick={() => setTab('jobs')} style={{ marginTop:16, padding:'10px 20px', borderRadius:10, background:'#3b82f6', border:'none', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                  Post a Job Opening
-                </button>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div style={{ textAlign:'center', padding:48, color:'var(--text-3)', fontSize:14 }}>No applications match your filters</div>
-            ) : (
-              filtered.map(a => (
-                <AppCard key={a.id} app={a} onStatus={updateStatus} onDelete={deleteApp} />
-              ))
-            )}
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Student Applications</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:24 }}>
+              Review, shortlist, interview, and <strong style={{ color:'#10b981' }}>accept</strong> or <strong style={{ color:'#ef4444' }}>reject</strong> student applications to your listings
+            </p>
+            <ApplicationAcceptancePanel
+              authorId={companyId}
+              accentColor="#3b82f6"
+              emptyMessage="No applications yet"
+              emptyAction={{ label:'Post a Job Opening', onClick:() => setTab('jobs') }}
+            />
           </motion.div>
         )}
 
