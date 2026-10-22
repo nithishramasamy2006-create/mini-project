@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDebounce } from '../hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, X, ChevronDown, Award, Star, Clock, Users, TrendingUp, MapPin, Flame, Bookmark } from 'lucide-react';
@@ -16,8 +16,23 @@ export default function ProjectsPage() {
   const [diff, setDiff] = useState('All Levels');
   const [sort, setSort] = useState('newest');
   const [ppo, setPpo]   = useState(false);
-  const [projects, setProjects] = useState(PROJECTS); // stateful — spots update live
-  const [applied,  setApplied]  = useState<Set<number>>(new Set()); // track applied IDs
+  const [projects, setProjects] = useState(PROJECTS);
+  const [applied,  setApplied]  = useState<Set<number>>(new Set());
+
+  // ─ Bookmarks: persisted to localStorage ────────────────
+  const [saved, setSaved] = useState<Set<number>>(() => {
+    try {
+      const s = localStorage.getItem('nm_saved_projects');
+      return s ? new Set<number>(JSON.parse(s)) : new Set<number>();
+    } catch { return new Set<number>(); }
+  });
+  useEffect(() => {
+    localStorage.setItem('nm_saved_projects', JSON.stringify([...saved]));
+  }, [saved]);
+  const toggleSave = useCallback((id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSaved(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }, []);
   const [applyItem, setApplyItem] = useState<typeof PROJECTS[0] | null>(null);
   const openApply  = useCallback((p: typeof PROJECTS[0]) => setApplyItem(p), []);
   const closeApply = useCallback(() => setApplyItem(null), []);
@@ -305,7 +320,19 @@ export default function ProjectsPage() {
                               <TrendingUp size={13} /> {p.spots <= 0 ? 'Fully Booked' : 'Apply Now'}
                             </button>
                           )}
-                          <button className="btn btn-ghost btn-icon" style={{ flexShrink:0 }}><Bookmark size={14} /></button>
+                          <button
+                            className="btn btn-ghost btn-icon"
+                            onClick={e => toggleSave(p.id, e)}
+                            title={saved.has(p.id) ? 'Remove bookmark' : 'Save project'}
+                            style={{
+                              flexShrink:0,
+                              border: `1.5px solid ${saved.has(p.id) ? '#7c3aed' : 'var(--border)'}`,
+                              background: saved.has(p.id) ? 'rgba(124,58,237,0.12)' : 'transparent',
+                              color: saved.has(p.id) ? '#a78bfa' : 'var(--text-3)',
+                              transition: 'all 0.15s',
+                            }}>
+                            <Bookmark size={14} fill={saved.has(p.id) ? '#a78bfa' : 'none'} />
+                          </button>
                         </div>
                       </div>
                     </motion.article>
