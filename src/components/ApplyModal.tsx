@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 interface ApplyModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: (itemId: number, updatedSpots: number | null) => void; // NEW
   type: ApplyData['type'] | 'course';
   itemId: number;
   itemTitle: string;
@@ -14,7 +15,7 @@ interface ApplyModalProps {
   color?: string;
 }
 
-export default function ApplyModal({ open, onClose, type, itemId, itemTitle, itemCompany, color = '#7c3aed' }: ApplyModalProps) {
+export default function ApplyModal({ open, onClose, onSuccess, type, itemId, itemTitle, itemCompany, color = '#7c3aed' }: ApplyModalProps) {
   const { user, apply } = useAuth();
   const navigate = useNavigate();
 
@@ -82,6 +83,8 @@ export default function ApplyModal({ open, onClose, type, itemId, itemTitle, ite
     setLoading(false);
     setResult({ type: res.success ? 'success' : 'error', text: res.message });
     if (res.success) {
+      // Fire callback so parent can decrement spots in the card immediately
+      onSuccess?.(itemId, res.updatedSpots ?? null);
       setTimeout(() => { onClose(); setResult(null); }, 3200);
     }
   };

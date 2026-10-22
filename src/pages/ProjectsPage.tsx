@@ -16,12 +16,28 @@ export default function ProjectsPage() {
   const [diff, setDiff] = useState('All Levels');
   const [sort, setSort] = useState('newest');
   const [ppo, setPpo]   = useState(false);
+  const [projects, setProjects] = useState(PROJECTS); // stateful — spots update live
+  const [applied,  setApplied]  = useState<Set<number>>(new Set()); // track applied IDs
   const [applyItem, setApplyItem] = useState<typeof PROJECTS[0] | null>(null);
   const openApply  = useCallback((p: typeof PROJECTS[0]) => setApplyItem(p), []);
   const closeApply = useCallback(() => setApplyItem(null), []);
 
+  // Called by ApplyModal after success — instantly updates card
+  const handleApplySuccess = useCallback((itemId: number, updatedSpots: number | null) => {
+    setApplied(prev => new Set(prev).add(itemId));
+    setProjects(prev => prev.map(p =>
+      p.id === itemId
+        ? {
+            ...p,
+            spots:    updatedSpots !== null ? updatedSpots : Math.max(0, p.spots - 1),
+            enrolled: p.enrolled + 1,
+          }
+        : p
+    ));
+  }, []);
+
   const filtered = useMemo(() => {
-    let list = PROJECTS.filter(p => {
+    let list = projects.filter(p => {
       if (dQ && !p.title.toLowerCase().includes(dQ.toLowerCase()) && !p.company.toLowerCase().includes(dQ.toLowerCase()) && !p.skills.some(s => s.toLowerCase().includes(dQ.toLowerCase()))) return false;
       if (cat !== 'all' && p.category !== cat) return false;
       if (diff !== 'All Levels' && p.difficulty !== diff) return false;
@@ -31,7 +47,7 @@ export default function ProjectsPage() {
     if (sort === 'stipend') list = [...list].sort((a,b) => parseInt(b.stipend.replace(/\D/g,'')) - parseInt(a.stipend.replace(/\D/g,'')));
     if (sort === 'rating') list = [...list].sort((a,b) => b.rating - a.rating);
     return list;
-  }, [dQ, cat, diff, sort, ppo]);
+  }, [projects, dQ, cat, diff, sort, ppo]);
 
   return (
     <div className="page" style={{ minHeight:'100vh', paddingTop:60 }}>
@@ -256,20 +272,39 @@ export default function ProjectsPage() {
                         {/* Spots + deadline */}
                         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
                           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                            <div style={{ width:6, height:6, borderRadius:'50%', background:p.spots<=2?'#ef4444':'#10b981', animation:p.spots<=2?'pulse 1.3s ease-in-out infinite':'none' }} />
-                            <span style={{ fontSize:11.5, fontWeight:600, color:p.spots<=2?'#fca5a5':'#6ee7b7' }}>{p.spots} spot{p.spots!==1?'s':''} left</span>
+                            <div style={{ width:6, height:6, borderRadius:'50%', background:p.spots<=0?'#ef4444':p.spots<=2?'#f59e0b':'#10b981', animation:p.spots<=2?'pulse 1.3s ease-in-out infinite':'none' }} />
+                            <span style={{ fontSize:11.5, fontWeight:700, color:p.spots<=0?'#fca5a5':p.spots<=2?'#fde68a':'#6ee7b7', transition:'color 0.4s' }}>
+                              {p.spots <= 0 ? 'Fully booked' : `${p.spots} spot${p.spots!==1?'s':''} left`}
+                            </span>
                           </div>
                           <span style={{ fontSize:10.5, color:'var(--text-3)' }}>Due {p.deadline}</span>
                         </div>
 
                         {/* CTA */}
                         <div style={{ display:'flex', gap:7, marginTop:'auto' }}>
-                          <button
-                            className="btn btn-primary"
-                          onClick={() => openApply(p)}
-                            style={{ flex:1, fontSize:12.5, padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                            <TrendingUp size={13} /> Apply Now
-                          </button>
+                          {applied.has(p.id) ? (
+                            <div style={{
+                              flex:1, fontSize:12.5, padding:'10px 16px',
+                              display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                              borderRadius:10, background:'rgba(16,185,129,0.12)',
+                              border:'1px solid rgba(16,185,129,0.3)', color:'#10b981', fontWeight:700,
+                            }}>
+                              ✓ Applied
+                            </div>
+                          ) : (
+                            <button
+                              className="btn btn-primary"
+                              onClick={() => openApply(p)}
+                              disabled={p.spots <= 0}
+                              style={{
+                                flex:1, fontSize:12.5, padding:'10px 16px',
+                                display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                                opacity: p.spots <= 0 ? 0.5 : 1,
+                                cursor: p.spots <= 0 ? 'not-allowed' : 'pointer',
+                              }}>
+                              <TrendingUp size={13} /> {p.spots <= 0 ? 'Fully Booked' : 'Apply Now'}
+                            </button>
+                          )}
                           <button className="btn btn-ghost btn-icon" style={{ flexShrink:0 }}><Bookmark size={14} /></button>
                         </div>
                       </div>
@@ -298,6 +333,7 @@ export default function ProjectsPage() {
       <ApplyModal
         open={!!applyItem}
         onClose={closeApply}
+        onSuccess={handleApplySuccess}
         type="project"
         itemId={applyItem?.id ?? 0}
         itemTitle={applyItem?.title ?? ''}

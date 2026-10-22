@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import Application from '../models/Application.js';
+import Project from '../models/Project.js';
 
 const router = express.Router();
 
@@ -20,15 +21,36 @@ router.post('/', protect, async (req, res) => {
   try {
     const { type, itemId, itemTitle, itemCompany, coverLetter, resumeLink, skills,
             userName, userEmail, userCollege, userBranch, userPhone } = req.body;
+
+    // ── Prevent duplicate applications ──────────────────────
     const existing = await Application.findOne({ userId: req.user.id, type, itemId });
     if (existing) return res.status(400).json({ message: `You already applied to this ${type}!` });
+
+    // ── Save application ─────────────────────────────────────
     const app = await Application.create({
       userId: req.user.id, user: req.user.id,
       userName, userEmail, userCollege, userBranch, userPhone,
       type, itemId, itemTitle, itemCompany, company: itemCompany,
       coverLetter, resumeLink, skills,
     });
-    res.status(201).json({ success: true, message: 'Application submitted successfully! 🎉', application: app });
+
+    // ── Decrement spots & increment enrolled in Project ──────
+    let updatedSpots = null;
+    if (type === 'project' || type === 'internship') {
+      const updated = await Project.findOneAndUpdate(
+        { id: itemId, spots: { $gt: 0 } },          // only if spots > 0
+        { $inc: { spots: -1, enrolled: 1 } },        // atomic decrement/increment
+        { new: true }
+      );
+      if (updated) updatedSpots = updated.spots;
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Application submitted successfully! 🎉',
+      application: app,
+      updatedSpots,   // send back new spots count to the frontend
+    });
   } catch (err) {
     if (err.code === 11000) return res.status(400).json({ message: 'You already applied to this!' });
     res.status(500).json({ message: err.message });

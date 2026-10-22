@@ -61,7 +61,7 @@ interface AuthState {
   /** Set auth state directly after registration / SSO */
   login: (user: User, token: string) => void;
   logout: () => void;
-  apply: (data: ApplyData) => Promise<{ success: boolean; message: string }>;
+  apply: (data: ApplyData) => Promise<{ success: boolean; message: string; updatedSpots?: number | null }>;
   /** Update current user's own profile fields via PUT /api/auth/profile */
   updateUser: (fields: Partial<User>) => Promise<{ success: boolean; message: string }>;
 }
@@ -156,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // ── apply ────────────────────────────────────────────────
-  const apply = async (applyData: ApplyData): Promise<{ success: boolean; message: string }> => {
+  const apply = async (applyData: ApplyData): Promise<{ success: boolean; message: string; updatedSpots?: number | null }> => {
     if (!token) return { success: false, message: 'Please login first to apply.' };
 
     // Build the full payload — modal form overrides take priority over profile data
@@ -179,7 +179,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.status === 400 && data.message?.includes('already applied')) {
         return { success: false, message: data.message };
       }
-      return { success: !!data.success, message: data.message || 'Application submitted!' };
+      return {
+        success: !!data.success,
+        message: data.message || 'Application submitted!',
+        updatedSpots: data.updatedSpots ?? null,   // ← spots after decrement
+      };
     } catch {
       // ── Offline fallback: save to localStorage and return success ──
       try {
