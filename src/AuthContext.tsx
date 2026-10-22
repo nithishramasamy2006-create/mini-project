@@ -45,6 +45,11 @@ export interface ApplyData {
   coverLetter?: string;
   resumeLink?: string;
   skills?: string[];
+  // Optional overrides from the apply modal form
+  userName?: string;
+  userEmail?: string;
+  userDepartment?: string;
+  userCollege?: string;
 }
 
 interface AuthState {
@@ -143,21 +148,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── apply ────────────────────────────────────────────────
   const apply = async (applyData: ApplyData): Promise<{ success: boolean; message: string }> => {
     if (!token) return { success: false, message: 'Please login first to apply.' };
+
+    // Build the full payload — modal form overrides take priority over profile data
+    const payload = {
+      ...applyData,
+      userName:    applyData.userName    || user?.name,
+      userEmail:   applyData.userEmail   || user?.email,
+      userCollege: applyData.userCollege || user?.college,
+      userBranch:  applyData.userDepartment || user?.branch,
+      userPhone:   user?.phone,
+    };
+
     try {
       const res  = await fetch(`${API}/applications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          ...applyData,
-          userName: user?.name, userEmail: user?.email,
-          userCollege: user?.college, userBranch: user?.branch,
-          userPhone: user?.phone,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
-      return { success: !!data.success, message: data.message || 'Done.' };
+      if (res.status === 400 && data.message?.includes('already applied')) {
+        return { success: false, message: data.message };
+      }
+      return { success: !!data.success, message: data.message || 'Application submitted!' };
     } catch {
-      return { success: false, message: 'Network error. Try again.' };
+      // ── Offline fallback: save to localStorage and return success ──
+      try {
+        const key = 'nm_pending_applications';
+        const pending = JSON.parse(localStorage.getItem(key) || '[]');
+        // Prevent duplicate offline applications
+        const isDup = pending.some(
+          (a: typeof payload) => a.type === payload.type && a.itemId === payload.itemId
+        );
+        if (isDup) return { success: false, message: `You already applied to this ${payload.type}!` };
+        pending.push({ ...payload, savedAt: new Date().toISOString(), status: 'pending_sync' });
+        localStorage.setItem(key, JSON.stringify(pending));
+        return {
+          success: true,
+          message: 'Application saved locally ✓ (will sync when server is online)',
+        };
+      } catch {
+        return { success: false, message: 'Cannot submit — please start the backend server (npm run server).' };
+      }
     }
   };
 
