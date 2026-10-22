@@ -80,6 +80,209 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
   });
   const [loading, setLoading] = useState(false);
   const [regNo,   setRegNo]   = useState('');
+
+  // ── Admit Card PDF Generator ────────────────────────────────
+  const downloadAdmitCard = () => {
+    const center = exam.centers?.find(c => c.id === selectedCenter);
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admit Card — ${exam.shortTitle}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Arial', sans-serif; background:#f0f4f8; display:flex; justify-content:center; padding:24px; }
+    .card { width:780px; background:#fff; border:2px solid #1a1a2e; border-radius:4px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.15); }
+
+    /* HEADER */
+    .header { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%); padding:20px 28px; display:flex; align-items:center; gap:18px; }
+    .logo-box { width:58px; height:58px; background:#7c3aed; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
+    .header-text { flex:1; }
+    .header-text h1 { color:#fff; font-size:18px; font-weight:800; letter-spacing:-0.01em; }
+    .header-text p { color:#a78bfa; font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-top:3px; }
+    .header-right { text-align:right; }
+    .header-right .tag { background:rgba(124,58,237,0.3); color:#c4b5fd; font-size:10px; font-weight:800; padding:3px 12px; border-radius:999px; letter-spacing:0.08em; text-transform:uppercase; }
+    .header-right .govt { color:#94a3b8; font-size:10px; margin-top:6px; }
+
+    /* ADMIT CARD TITLE BAR */
+    .title-bar { background:#7c3aed; padding:8px 28px; text-align:center; }
+    .title-bar h2 { color:#fff; font-size:15px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; }
+
+    /* EXAM INFO BANNER */
+    .exam-banner { background:#f8f7ff; border-bottom:1px solid #e5e7eb; padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .exam-banner .exam-name { font-size:14px; font-weight:700; color:#1a1a2e; flex:1; line-height:1.3; }
+    .exam-banner .reg-badge { background:#7c3aed; color:#fff; font-size:11px; font-weight:800; padding:5px 16px; border-radius:6px; white-space:nowrap; }
+
+    /* BODY */
+    .body { padding:20px 28px; }
+
+    /* SECTION TITLE */
+    .section-title { font-size:10px; font-weight:800; color:#7c3aed; text-transform:uppercase; letter-spacing:0.1em; border-bottom:2px solid #7c3aed; padding-bottom:4px; margin-bottom:12px; margin-top:20px; }
+    .section-title:first-child { margin-top:0; }
+
+    /* INFO GRID */
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden; margin-bottom:4px; }
+    .info-cell { padding:9px 14px; border-right:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb; }
+    .info-cell:nth-child(even) { border-right:none; }
+    .info-cell:nth-last-child(-n+2) { border-bottom:none; }
+    .info-cell .lbl { font-size:9.5px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:3px; }
+    .info-cell .val { font-size:13px; font-weight:700; color:#111827; }
+
+    /* EXAM SCHEDULE */
+    .schedule-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:4px; }
+    .schedule-box { border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; text-align:center; background:#fafafa; }
+    .schedule-box .icon { font-size:20px; margin-bottom:4px; }
+    .schedule-box .lbl { font-size:9px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:3px; }
+    .schedule-box .val { font-size:11.5px; font-weight:800; color:#111827; line-height:1.3; }
+
+    /* CENTER */
+    .center-box { border:1px solid #dbeafe; border-radius:8px; background:#eff6ff; padding:14px 18px; margin-bottom:4px; }
+    .center-box .city { font-size:16px; font-weight:800; color:#1d4ed8; margin-bottom:2px; }
+    .center-box .venue { font-size:13px; font-weight:700; color:#1e3a8a; margin-bottom:4px; }
+    .center-box .addr { font-size:11.5px; color:#374151; line-height:1.5; }
+    .center-box .landmark { font-size:11px; color:#6b7280; margin-top:4px; }
+
+    /* EXAM PATTERN */
+    .pattern-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .pattern-table th { background:#f3f0ff; color:#7c3aed; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; padding:7px 12px; text-align:left; border:1px solid #e5e7eb; }
+    .pattern-table td { padding:7px 12px; border:1px solid #e5e7eb; color:#374151; font-weight:600; }
+    .pattern-table tr:nth-child(even) td { background:#fafafa; }
+
+    /* INSTRUCTIONS */
+    .instructions { background:#fff8f0; border:1px solid #fed7aa; border-radius:8px; padding:14px 16px; }
+    .instructions h4 { color:#c2410c; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:8px; }
+    .instructions ol { padding-left:18px; }
+    .instructions li { font-size:11.5px; color:#374151; margin-bottom:5px; line-height:1.4; }
+
+    /* FOOTER */
+    .footer { background:#1a1a2e; padding:12px 28px; display:flex; align-items:center; justify-content:space-between; margin-top:20px; }
+    .footer .left { color:#94a3b8; font-size:10px; }
+    .footer .stamp { border:2px solid #7c3aed; padding:4px 14px; border-radius:4px; color:#a78bfa; font-size:10px; font-weight:800; letter-spacing:0.1em; }
+
+    /* WATERMARK */
+    .watermark { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-size:72px; font-weight:900; color:rgba(124,58,237,0.04); pointer-events:none; white-space:nowrap; letter-spacing:0.1em; }
+
+    @media print {
+      body { background:#fff; padding:0; }
+      .card { box-shadow:none; border:1px solid #000; }
+      .watermark { color:rgba(0,0,0,0.04); }
+    }
+  </style>
+</head>
+<body>
+<div class="watermark">NaanMudhalvan</div>
+<div class="card">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-box">⚡</div>
+    <div class="header-text">
+      <h1>NaanMudhalvan</h1>
+      <p>Learning Marketplace — Tamil Nadu</p>
+    </div>
+    <div class="header-right">
+      <div class="tag">Hall Ticket</div>
+      <div class="govt" style="margin-top:6px;">Govt. of Tamil Nadu Initiative</div>
+      <div class="govt">Issued: ${new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</div>
+    </div>
+  </div>
+
+  <!-- TITLE BAR -->
+  <div class="title-bar"><h2>Admit Card / Hall Ticket</h2></div>
+
+  <!-- EXAM BANNER -->
+  <div class="exam-banner">
+    <div class="exam-name">${exam.title}</div>
+    <div class="reg-badge">Reg. No: ${regNo}</div>
+  </div>
+
+  <div class="body">
+
+    <!-- CANDIDATE DETAILS -->
+    <div class="section-title">Candidate Details</div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="lbl">Full Name</div><div class="val">${form.name}</div></div>
+      <div class="info-cell"><div class="lbl">Email Address</div><div class="val">${form.email}</div></div>
+      <div class="info-cell"><div class="lbl">Mobile Number</div><div class="val">${form.phone}</div></div>
+      <div class="info-cell"><div class="lbl">Aadhaar (Last 4)</div><div class="val">XXXX-XXXX-XX${form.aadhaar || 'XXXX'}</div></div>
+      <div class="info-cell"><div class="lbl">College / Institution</div><div class="val">${form.college}</div></div>
+      <div class="info-cell"><div class="lbl">Branch / Department</div><div class="val">${form.branch}</div></div>
+      <div class="info-cell"><div class="lbl">Year of Study</div><div class="val">${form.year}</div></div>
+      <div class="info-cell"><div class="lbl">CGPA</div><div class="val">${form.cgpa || 'Not Provided'}</div></div>
+    </div>
+
+    <!-- EXAM SCHEDULE -->
+    <div class="section-title" style="margin-top:18px;">Exam Schedule</div>
+    <div class="schedule-grid">
+      <div class="schedule-box"><div class="icon">📅</div><div class="lbl">Exam Date</div><div class="val">${exam.examDate}</div></div>
+      <div class="schedule-box"><div class="icon">⏰</div><div class="lbl">Exam Time</div><div class="val">${exam.examTime}</div></div>
+      <div class="schedule-box"><div class="icon">⏱️</div><div class="lbl">Duration</div><div class="val">${exam.duration}</div></div>
+      <div class="schedule-box"><div class="icon">🏅</div><div class="lbl">Admit Card Date</div><div class="val">${exam.admitCardDate}</div></div>
+    </div>
+
+    <!-- EXAM CENTER -->
+    ${center ? `
+    <div class="section-title" style="margin-top:18px;">Exam Center</div>
+    <div class="center-box">
+      <div class="city">📍 ${center.city}, Tamil Nadu</div>
+      <div class="venue">${center.venue}</div>
+      <div class="addr">${center.address} &nbsp;&bull;&nbsp; PIN: ${center.pincode}</div>
+      <div class="landmark">Landmark: ${center.landmark} &nbsp;&bull;&nbsp; 📞 ${center.phone}</div>
+    </div>` : `
+    <div class="section-title" style="margin-top:18px;">Exam Mode</div>
+    <div class="center-box" style="background:#f0fdf4;border-color:#bbf7d0;">
+      <div class="city" style="color:#15803d;">🌐 Online Exam</div>
+      <div class="venue" style="color:#166534;">Login via NaanMudhalvan Exam Portal</div>
+      <div class="addr">https://exam.naanmudhalvan.tn.gov.in</div>
+      <div class="landmark">Ensure stable internet. Use Chrome/Edge browser. No VPN.</div>
+    </div>`}
+
+    <!-- EXAM PATTERN -->
+    <div class="section-title" style="margin-top:18px;">Exam Pattern</div>
+    <table class="pattern-table">
+      <thead><tr><th>Section</th><th>Questions</th><th>Marks</th></tr></thead>
+      <tbody>
+        ${exam.pattern.sections.map(s => `<tr><td>${s.name}</td><td>${s.questions}</td><td>${s.marks}</td></tr>`).join('')}
+        <tr><td style="font-weight:800;color:#111;">Total</td><td style="font-weight:800;">${exam.pattern.totalQuestions}</td><td style="font-weight:800;">${exam.pattern.totalMarks}</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:11px;color:#6b7280;margin-top:6px;">Negative Marking: ${exam.pattern.negativeMarking > 0 ? `−${exam.pattern.negativeMarking} mark per wrong answer` : 'No negative marking'} &nbsp;|&nbsp; Language: ${exam.languages.join(', ')}</p>
+
+    <!-- INSTRUCTIONS -->
+    <div class="section-title" style="margin-top:18px;">Important Instructions</div>
+    <div class="instructions">
+      <h4>⚠️ Read Carefully Before the Exam</h4>
+      <ol>
+        <li>Carry this Admit Card along with a valid Government Photo ID (Aadhaar Card / College ID) to the exam center.</li>
+        <li>Report to the exam center at least <strong>30 minutes before</strong> the scheduled exam time.</li>
+        <li>Mobile phones, smartwatches, earphones, and electronic devices are strictly prohibited inside the exam hall.</li>
+        <li>Use only blue or black ballpoint pen for OMR sheet (offline exams). Do not use pencil or correction fluid.</li>
+        <li>Candidates arriving after the exam starts will NOT be permitted to enter the hall.</li>
+        <li>This admit card is system-generated and does not require a physical signature or stamp.</li>
+        <li>For online exams: ensure stable internet, use latest Chrome/Edge, no extensions active, and complete a mock test 24 hours before.</li>
+        <li>Result will be declared on: <strong>${exam.resultDate}</strong>. Check the NaanMudhalvan portal for results.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="left">
+      <div style="color:#e2e8f0;font-weight:700;margin-bottom:2px;">NaanMudhalvan Exam Cell</div>
+      <div>exam@naanmudhalvan.tn.gov.in &nbsp;|&nbsp; 1800-425-5555 (Toll Free)</div>
+    </div>
+    <div class="stamp">VERIFIED ✓</div>
+  </div>
+
+</div>
+<script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`;
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
   const steps = exam.mode === 'offline'
     ? ['details', 'center', 'form', 'review', 'success']
     : ['details', 'form', 'review', 'success'];
@@ -363,8 +566,9 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button onClick={onClose} className="btn btn-ghost" style={{ padding: '10px 20px' }}>Close</button>
-                <button className="btn btn-primary" style={{ padding: '10px 20px', background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color }}
-                  onClick={() => { alert(`Admit card will be available for download on ${exam.admitCardDate}`); }}>
+                <button className="btn btn-primary"
+                  style={{ padding: '10px 20px', background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color }}
+                  onClick={downloadAdmitCard}>
                   <Download size={14} /> Download Admit Card
                 </button>
               </div>
