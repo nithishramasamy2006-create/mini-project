@@ -1,7 +1,7 @@
 # 🎓 NaanMudhalvan Learning Marketplace
-### Complete Project Documentation & Ideation
+### Complete Project Documentation & Ideation — v2.0
 
-> **A full-stack learning marketplace** connecting Tamil Nadu college students with real industry projects, internships, mentors, and skill courses — powered by the Government of Tamil Nadu's Naan Mudhalvan initiative.
+> **A full-stack learning marketplace** connecting Tamil Nadu college students with real industry projects, internships, mentors, skill courses, events, and certified exams — powered by the Government of Tamil Nadu's Naan Mudhalvan initiative.
 
 ---
 
@@ -10,6 +10,7 @@
 | Field | Details |
 |---|---|
 | **Project Name** | NaanMudhalvan Learning Marketplace |
+| **Version** | 2.0 (October 2025) |
 | **Type** | Full-Stack Web Application |
 | **Domain** | EdTech / Career Platform |
 | **Target Users** | Students, Companies, Colleges, Admins |
@@ -17,6 +18,7 @@
 | **GitHub** | [nithishramasamy2006-create/mini-project](https://github.com/nithishramasamy2006-create/mini-project) |
 | **Frontend Port** | http://localhost:8080 |
 | **Backend Port** | http://localhost:5000 |
+| **Last Updated** | October 22, 2025 |
 
 ---
 
@@ -28,19 +30,24 @@ Tamil Nadu has **5 lakh+ engineering graduates** per year, yet:
 - Students learn theory but never build real products
 - Companies struggle to find entry-level talent with practical experience
 - Colleges have no systematic way to track student industry exposure
+- No unified platform for skill exams, events, and project experience
 
 ### The Solution
 A unified **Learning-to-Earning platform** where:
 - Students apply for **real micro-projects** from companies and earn stipends
 - Companies get **affordable talent** without full hiring costs
 - Colleges track **student progress** and industry engagement
-- Government certifies skills through **NM-certified courses**
+- Government certifies skills through **NM-certified courses & exams**
+- Students discover **hackathons, workshops, webinars** and register instantly
+- Students take **online & offline skill exams** at 10+ TN centers
 
 ### Core Value Proposition
 ```
 Student  → Applies for project → Earns stipend → Gets certificate → Lands job
 Company  → Posts project       → Gets talent   → Converts to PPO → Saves cost
 College  → Tracks students     → Shows placement rate → Improves ranking
+Student  → Registers for exam  → Gets NM badge → Priority project access
+Student  → Attends event/hackathon → Wins prize → Builds portfolio
 ```
 
 ---
@@ -48,24 +55,25 @@ College  → Tracks students     → Shows placement rate → Improves ranking
 ## 🏗️ System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                   FRONTEND (React SPA)                       │
-│                  localhost:8080 (Vite)                       │
-│                                                              │
-│  Pages (18)  │  Components (11)  │  Contexts  │  Hooks      │
-└───────────────────────┬──────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                   FRONTEND (React SPA)                           │
+│                  localhost:8080 (Vite)                           │
+│                                                                  │
+│  Pages (22)  │  Components (11)  │  Contexts  │  Hooks          │
+│  Data Files: data.ts, courseData.ts, eventsData.ts, examData.ts │
+└───────────────────────┬──────────────────────────────────────────┘
                         │  HTTP REST API (fetch + JWT)
-┌───────────────────────▼──────────────────────────────────────┐
-│                BACKEND (Express.js)                          │
-│               localhost:5000 (Node.js)                       │
-│         10 API Route Groups  │  JWT Middleware               │
-└───────────────────────┬──────────────────────────────────────┘
+┌───────────────────────▼──────────────────────────────────────────┐
+│                BACKEND (Express.js)                              │
+│               localhost:5000 (Node.js)                           │
+│         10 API Route Groups  │  JWT Middleware                   │
+└───────────────────────┬──────────────────────────────────────────┘
                         │  Mongoose ODM
-┌───────────────────────▼──────────────────────────────────────┐
-│                DATABASE (MongoDB)                            │
-│   7 Collections: Users, Projects, Applications,              │
-│   Courses, Internships, Mentors, Leaderboard                 │
-└──────────────────────────────────────────────────────────────┘
+┌───────────────────────▼──────────────────────────────────────────┐
+│                DATABASE (MongoDB)                                │
+│   7 Collections: Users, Projects, Applications,                  │
+│   Courses, Internships, Mentors, Leaderboard                     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -77,11 +85,10 @@ College  → Tracks students     → Shows placement rate → Improves ranking
 |---|---|---|
 | **React** | 19.2.8 | UI framework |
 | **TypeScript** | ~6.0.2 | Type safety |
-| **Vite** | 8.3.0 | Build tool & dev server |
-| **React Router DOM** | 7.18.4 | Client-side routing |
+| **Vite** | 8.3.0 | Build tool & dev server (port 8080, strictPort) |
+| **React Router DOM** | 7.18.4 | Client-side routing (22 routes) |
 | **Framer Motion** | 14.1.0 | Animations & transitions |
 | **Lucide React** | 1.55.0 | Icon library |
-| **TailwindCSS** | 4.3.3 | Utility CSS (via Vite plugin) |
 | **Vanilla CSS** | — | Custom design system (`index.css`) |
 
 ### Backend
@@ -91,7 +98,7 @@ College  → Tracks students     → Shows placement rate → Improves ranking
 | **MongoDB** | 6.x | NoSQL database |
 | **Mongoose** | 9.11.1 | MongoDB ODM |
 | **jsonwebtoken** | 9.x | JWT authentication |
-| **bcryptjs** | 3.x | Password hashing (salt 12) |
+| **bcryptjs** | 3.x | Password hashing (salt rounds: 12) |
 | **dotenv** | 18.x | Environment variables |
 | **cors** | 2.8.6 | Cross-Origin Resource Sharing |
 
@@ -108,73 +115,79 @@ College  → Tracks students     → Shows placement rate → Improves ranking
 
 ```
 pro/
-├── src/                          # Frontend source
-│   ├── App.tsx                   # Root — routing, providers, code splitting
-│   ├── main.tsx                  # React 19 entry point
-│   ├── index.css                 # Full design system (CSS variables, components)
-│   ├── AuthContext.tsx           # Auth state, JWT, apply(), profile updates
-│   ├── ThemeContext.tsx          # Dark/Light mode persistence
-│   ├── hooks.ts                  # Shared hooks (useDebounce, usePrevious)
-│   ├── data.ts                   # Static data: Projects, Internships, Mentors
+├── src/                              # Frontend source
+│   ├── App.tsx                       # Root — routing, providers, code splitting
+│   ├── main.tsx                      # React 19 entry point
+│   ├── index.css                     # Full design system (CSS variables, components)
+│   ├── AuthContext.tsx               # Auth state, JWT, apply(), profile updates
+│   ├── ThemeContext.tsx              # Dark/Light mode persistence
+│   ├── hooks.ts                      # Shared hooks (useDebounce, usePrevious)
 │   │
-│   ├── pages/                    # 18 route-level pages (all React.lazy loaded)
-│   │   ├── HomePage.tsx          # Landing page with hero, marquee, testimonials
-│   │   ├── ProjectsPage.tsx      # Browse & apply for real projects (live spots)
-│   │   ├── CoursesPage.tsx       # 200+ courses with sidebar filters
-│   │   ├── InternshipsPage.tsx   # Paid/certificate internship listings
-│   │   ├── MentorsPage.tsx       # 500+ expert mentors directory
-│   │   ├── LeaderboardPage.tsx   # XP-based student rankings
-│   │   ├── JobPortalPage.tsx     # Full job board
-│   │   ├── CourseViewer.tsx      # In-browser video course player
-│   │   ├── CertificatePage.tsx   # Government-certified certificates
-│   │   ├── LoginPage.tsx         # Multi-role login
-│   │   ├── RegisterPage.tsx      # Role-based registration
-│   │   ├── HowItWorksPage.tsx    # Platform walkthrough
+│   ├── data.ts                       # Projects, Internships, Mentors, NAV_ITEMS
+│   ├── courseData.ts                 # 200+ courses across 6 categories
+│   ├── eventsData.ts                 # 12 events: hackathons, workshops, webinars
+│   └── examData.ts                   # 9 exams + 10 TN offline centers
+│   │
+│   ├── pages/                        # 22 route-level pages (all React.lazy loaded)
+│   │   ├── HomePage.tsx              # Landing page with hero, marquee, testimonials
+│   │   ├── ProjectsPage.tsx          # Browse & apply for real projects (live spots + bookmark)
+│   │   ├── CoursesPage.tsx           # 200+ courses, sidebar tabs (Profile/Wishlist/Reviews/Q&A)
+│   │   ├── InternshipsPage.tsx       # Paid/certificate internship listings
+│   │   ├── MentorsPage.tsx           # 500+ expert mentors directory
+│   │   ├── LeaderboardPage.tsx       # XP-based student rankings
+│   │   ├── JobPortalPage.tsx         # Full job board
+│   │   ├── EventsPage.tsx            # ✨ NEW: 12 events with registration modal
+│   │   ├── ExamPortalPage.tsx        # ✨ NEW: 9 exams, online/offline, center selection
+│   │   ├── CourseViewer.tsx          # In-browser video course player
+│   │   ├── CertificatePage.tsx       # Government-certified certificates
+│   │   ├── LoginPage.tsx             # Multi-role login
+│   │   ├── RegisterPage.tsx          # Role-based registration
+│   │   ├── HowItWorksPage.tsx        # Platform walkthrough
 │   │   ├── PlacementSupportPage.tsx  # Career support services
-│   │   ├── AlumniNetworkPage.tsx # Alumni stories & network
-│   │   ├── StudentPortal.tsx     # Student dashboard
-│   │   ├── CompanyPortal.tsx     # Company dashboard
-│   │   ├── CollegePortal.tsx     # College dashboard
-│   │   └── AdminPortal.tsx       # Admin management
+│   │   ├── AlumniNetworkPage.tsx     # Alumni stories & network
+│   │   ├── StudentPortal.tsx         # Student dashboard
+│   │   ├── CompanyPortal.tsx         # Company dashboard
+│   │   ├── CollegePortal.tsx         # College dashboard
+│   │   └── AdminPortal.tsx           # Admin management
 │   │
-│   └── components/               # 11 reusable components
-│       ├── Navbar.tsx            # Responsive nav + theme toggle + user dropdown
-│       ├── Footer.tsx            # Site-wide footer with CTA + links
-│       ├── ApplyModal.tsx        # Application modal (form, resume upload)
-│       ├── AIChatbot.tsx         # Multilingual AI chatbot (EN/Tamil/Hindi)
-│       ├── Hero.tsx              # Homepage hero section
-│       ├── HowItWorks.tsx        # 4-step process explainer
-│       ├── Testimonials.tsx      # Student testimonials carousel
-│       ├── ProjectCard.tsx       # Reusable project listing card
-│       ├── ProjectsExplorer.tsx  # Filterable projects grid
-│       ├── CompanyBelt.tsx       # Partner companies marquee
-│       └── StarField.tsx         # Animated background star particles
+│   └── components/                   # 11 reusable components
+│       ├── Navbar.tsx                # Responsive nav + theme toggle + user dropdown
+│       ├── Footer.tsx                # Site-wide footer with CTA + links
+│       ├── ApplyModal.tsx            # Application modal (form, onSuccess callback)
+│       ├── AIChatbot.tsx             # Multilingual AI chatbot (EN/Tamil/Hindi)
+│       ├── Hero.tsx                  # Homepage hero section
+│       ├── HowItWorks.tsx            # 4-step process explainer
+│       ├── Testimonials.tsx          # Student testimonials carousel
+│       ├── ProjectCard.tsx           # Reusable project listing card
+│       ├── ProjectsExplorer.tsx      # Filterable projects grid
+│       ├── CompanyBelt.tsx           # Partner companies marquee
+│       └── StarField.tsx             # Animated background star particles
 │
-└── server/                       # Backend source
-    ├── index.js                  # Express app: CORS, routes, DB connection
-    ├── .env                      # MONGO_URI, JWT_SECRET, PORT
-    ├── seed.js                   # Database seeder
-    ├── config/db.js              # MongoDB connection via Mongoose
-    ├── middleware/auth.js        # JWT protect middleware
-    ├── models/                   # 7 Mongoose schemas
-    │   ├── User.js               # Multi-role user schema
-    │   ├── Project.js            # Project listings with spots & enrolled
-    │   ├── Application.js        # Job/project applications
-    │   ├── Course.js             # Course metadata
-    │   ├── Internship.js         # Internship listings
-    │   ├── Mentor.js             # Mentor profiles
-    │   └── Leaderboard.js        # XP scores & rankings
-    └── routes/                   # 10 API route groups
-        ├── auth.js               # Register, Login, /me, Profile update
-        ├── applications.js       # Apply + atomic spots decrement
-        ├── projects.js           # CRUD projects
-        ├── courses.js            # Course listings
-        ├── internships.js        # Internship listings
-        ├── mentors.js            # Mentor directory
-        ├── leaderboard.js        # Rankings
-        ├── company.js            # Company portal APIs
-        ├── college.js            # College portal APIs
-        └── admin.js              # Admin management APIs
+└── server/                           # Backend source
+    ├── index.js                      # Express app: CORS, routes, DB connection
+    ├── .env                          # MONGO_URI, JWT_SECRET, PORT
+    ├── seed.js                       # Database seeder
+    ├── config/db.js                  # MongoDB connection via Mongoose
+    ├── middleware/auth.js            # JWT protect middleware
+    ├── models/                       # 7 Mongoose schemas
+    │   ├── User.js                   # Multi-role user schema
+    │   ├── Project.js                # Project listings with spots & enrolled
+    │   ├── Application.js            # Job/project applications
+    │   ├── Course.js                 # Course metadata
+    │   ├── Internship.js             # Internship listings
+    │   ├── Mentor.js                 # Mentor profiles
+    │   └── Leaderboard.js            # XP scores & rankings
+    └── routes/                       # 10 API route groups
+        ├── auth.js                   # Register, Login, /me, Profile update
+        ├── applications.js           # Apply + atomic spots decrement
+        ├── projects.js               # CRUD projects
+        ├── courses.js                # Course listings
+        ├── internships.js            # Internship listings
+        ├── mentors.js                # Mentor directory
+        ├── leaderboard.js            # Rankings
+        ├── company.js                # Company portal APIs
+        ├── college.js                # College portal APIs
+        └── admin.js                  # Admin management APIs
 ```
 
 ---
@@ -206,8 +219,8 @@ pro/
 {
   id, title, company, category, difficulty ('Beginner'|'Intermediate'|'Advanced'|'Expert'),
   duration, stipend, skills[], description,
-  spots,      // decrements by 1 on each application
-  enrolled,   // increments by 1 on each application
+  spots,      // decrements by 1 atomically on each application ($inc: -1)
+  enrolled,   // increments by 1 atomically on each application ($inc: +1)
   rating, reviews, mentor, mentorRole, tags[],
   featured, naan_aligned, ppo, deadline, location, color
 }
@@ -227,6 +240,55 @@ pro/
 
 ---
 
+## 📋 Data Files (Frontend Static Data)
+
+### `eventsData.ts` — 12 Events
+| Field | Description |
+|---|---|
+| `type` | hackathon / workshop / webinar / bootcamp / career-fair / competition / conference / guest-lecture |
+| `mode` | online / offline / hybrid |
+| `date` + `endDate` | Single or multi-day events |
+| `seats` + `seatsLeft` | For seats progress bar |
+| `price` | `"Free"` or `"₹199"` |
+| `registrationDeadline` | Countdown urgency label |
+| `skills[]` | Skill tags per event |
+| `speakers[]` | Name, role, company |
+| `prize` | Hackathon/competition prize pool |
+| `certificate` | 🏅 badge on card |
+| `organizer` + `organizerLogo` | Company name + emoji |
+| `featured` | Shown in featured hero row |
+
+### `examData.ts` — 9 Exams + 10 TN Centers
+| Field | Description |
+|---|---|
+| `mode` | online / offline / hybrid |
+| `examDate`, `examTime`, `duration` | Scheduled exam info |
+| `registrationDeadline`, `admitCardDate`, `resultDate` | Key lifecycle dates |
+| `pattern` | Total Qs, Marks, duration, negative marking, sections[] |
+| `syllabus[]` | Unit → topics[] → marks (expandable in UI) |
+| `centers[]` | Offline venue list — city, venue, address, landmark, pincode, phone, seats |
+| `eligibility` | branches[], years[], minCGPA, others[] |
+| `languages` | Tamil / English / both |
+| `difficulty` | Easy → Moderate → Hard → Expert |
+| `status` | open / closing-soon / closed / upcoming / result-declared |
+| `benefits[]` | Rewards on passing |
+
+### TN Offline Exam Centers (10 Cities)
+| Center | City | Venue |
+|---|---|---|
+| chn-01 | Chennai | Anna University – CEG Campus |
+| chn-02 | Chennai | SRM Institute of Science & Technology |
+| cbe-01 | Coimbatore | PSG College of Technology |
+| cbe-02 | Coimbatore | Amrita School of Engineering |
+| mdu-01 | Madurai | Thiagarajar College of Engineering |
+| try-01 | Trichy | NIT Trichy |
+| sal-01 | Salem | Salem Engineering College |
+| vellore-01 | Vellore | VIT University |
+| erode-01 | Erode | Bannari Amman Institute of Technology |
+| tvm-01 | Tirunelveli | Manonmaniam Sundaranar University |
+
+---
+
 ## 🔌 API Reference
 
 ### Base URL: `http://localhost:5000/api`
@@ -242,7 +304,7 @@ pro/
 #### Applications
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| `POST` | `/applications` | JWT | Submit application + decrement spots |
+| `POST` | `/applications` | JWT | Submit application + atomic spots decrement |
 | `GET` | `/applications/my` | JWT | Student's own applications |
 | `GET` | `/applications` | JWT | All applications (admin) |
 
@@ -267,7 +329,11 @@ pro/
 - Apply with cover letter and resume
 - Earn stipends (₹5,000–₹25,000/month)
 - Enrol in 200+ free courses
+- Save courses to Wishlist (localStorage)
+- Bookmark projects (localStorage)
 - Track XP on leaderboard
+- Register for events & hackathons
+- Take online/offline skill assessment exams
 - Receive government-certified certificates
 - Connect with 500+ industry mentors
 
@@ -296,7 +362,7 @@ pro/
 
 ## ✨ Full Features List
 
-### Core
+### Core Platform
 - [x] Multi-role authentication (JWT, bcrypt-12)
 - [x] Project marketplace with filters, search, sort
 - [x] **Live spots tracking** — Atomic decrement in MongoDB on every apply
@@ -307,10 +373,61 @@ pro/
 - [x] Internship board — Paid and Certificate types
 - [x] Mentor directory with booking
 - [x] XP leaderboard (project +500, course +200, daily streak +10)
-- [x] Full job portal
+- [x] Full job portal with company filters
 - [x] Government-certified digital certificates
 - [x] Placement support (resume builder, mock interview, career guidance)
 - [x] Alumni success stories network
+
+### ✨ New in v2.0
+
+#### Events Page (`/events`)
+- [x] 12 events: Hackathons, Workshops, Webinars, Bootcamps, Career Fairs, Competitions, Conferences, Guest Lectures
+- [x] Featured events hero carousel
+- [x] Filter by type (8 types), mode (Online/Offline/Hybrid), price (Free/Paid)
+- [x] Debounced search across title, skills, organizer, tags, location
+- [x] Seats progress bar (turns red when >80% filled)
+- [x] Urgency deadline label ("Last Day!", "3d left", "12 days left")
+- [x] Prize pool display for hackathons
+- [x] Bookmark/save events to localStorage
+- [x] Full registration modal: name, email, college, branch, year, phone, motivation
+- [x] Registration success screen with confirmation details
+- [x] "✓ Registered" badge persisted across sessions (localStorage)
+- [x] Speaker profiles per event
+- [x] Certificate badge indicator
+
+#### Exam Portal (`/exams`)
+- [x] 9 exams across 7 categories (Skill Assessment, Aptitude, Technical, Certification, Government, Competitive, Language)
+- [x] Online / Offline / Hybrid mode support
+- [x] **10 physical exam centers** across Tamil Nadu with full venue details
+- [x] Category filter (8 types), mode filter, price filter
+- [x] Debounced search
+- [x] Expandable syllabus accordion per exam
+- [x] Exam pattern: total questions, marks, duration, negative marking, sections breakdown
+- [x] Eligibility tags: branches, years, min CGPA
+- [x] Difficulty badge: Easy → Moderate → Hard → Expert
+- [x] Status badges: Open / Closing Soon / Closed / Upcoming / Result Declared
+- [x] Registration progress bar per exam
+- [x] Multi-step registration modal:
+  - **Online exam:** Exam Info → Personal Details → Review → ✅ Success
+  - **Offline exam:** Exam Info → Choose Center (with map link, seats bar) → Personal Details → Review → ✅ Success
+- [x] Registration number generated and shown on success
+- [x] Key dates shown: admit card date, result date, exam date/time
+- [x] Scrolling center marquee strip at page top
+- [x] "Download Admit Card" action on success screen
+
+#### CoursesPage Sidebar Fixes
+- [x] Sidebar nav tabs now work (My Profile / Courses / Wishlist / Reviews / Q&A)
+- [x] Profile tab: shows user info grid (name, email, college, branch, year, role)
+- [x] Wishlist tab: shows saved courses grid with red count badge, Remove button
+- [x] Wishlist persisted to `localStorage` key `nm_wishlist`
+- [x] Reviews tab: placeholder with empty state CTA
+- [x] Q&A tab: placeholder with empty state CTA
+
+#### ProjectsPage Bookmark
+- [x] Bookmark button now toggles filled/outline icon
+- [x] Saved state: violet border + violet filled icon
+- [x] Bookmarks persisted to `localStorage` key `nm_saved_projects`
+- [x] `e.stopPropagation()` — bookmark doesn't trigger apply modal
 
 ### UI/UX
 - [x] Dark / Light theme with CSS variables, persisted to localStorage
@@ -329,7 +446,7 @@ pro/
 
 | Optimization | What It Fixes |
 |---|---|
-| `React.lazy` code splitting (18 pages) | Only loads current page's JS chunk |
+| `React.lazy` code splitting (22 pages) | Only loads current page's JS chunk |
 | Search debouncing at 180ms | No filter flicker on every keystroke |
 | `useMemo` on all filter lists | Zero recalculation on unrelated renders |
 | `useCallback` on all event handlers | Stable refs, no child re-renders |
@@ -339,7 +456,7 @@ pro/
 | 4-second session restore timeout | App never hangs if backend is slow |
 | `AbortController` on all fetches | Clean cancellation on unmount |
 | Vite manual chunk splitting | react, router, motion, icons cached separately |
-| Vite cache cleared on start | No stale dependency conflicts |
+| `localStorage` for wishlist/bookmarks | Instant state restore without API |
 
 ---
 
@@ -359,6 +476,59 @@ pro/
 | 10 | Spots counter never decreased after applying | Atomic MongoDB `$inc`, optimistic frontend update |
 | 11 | InternshipsPage filter recalculated on every render | Wrapped in `useMemo` |
 | 12 | Session restore blocked UI indefinitely | `AbortController` with 4-second timeout |
+| 13 | Sidebar nav items (My Profile, Wishlist, etc.) did nothing | Replaced dead `NavLink` hash routes with `activeView` tab state |
+| 14 | Wishlist state reset on every page refresh | Persisted to `localStorage` (`nm_wishlist`) |
+| 15 | Bookmark button on project cards had no onClick | Wired `toggleSave` with localStorage persistence |
+| 16 | Bookmark click opened apply modal | Added `e.stopPropagation()` to bookmark handler |
+
+---
+
+## 🗺️ All Routes
+
+| Route | Page | Auth | Status |
+|---|---|---|---|
+| `/` | HomePage | Public | ✅ Live |
+| `/projects` | ProjectsPage | Public | ✅ Live |
+| `/courses` | CoursesPage | Public | ✅ Live |
+| `/internships` | InternshipsPage | Public | ✅ Live |
+| `/events` | EventsPage | Public | ✅ **NEW** |
+| `/exams` | ExamPortalPage | Public | ✅ **NEW** |
+| `/mentors` | MentorsPage | Public | ✅ Live |
+| `/leaderboard` | LeaderboardPage | Public | ✅ Live |
+| `/jobs` | JobPortalPage | Public | ✅ Live |
+| `/certificates` | CertificatePage | Public | ✅ Live |
+| `/how-it-works` | HowItWorksPage | Public | ✅ Live |
+| `/placement-support` | PlacementSupportPage | Public | ✅ Live |
+| `/alumni-network` | AlumniNetworkPage | Public | ✅ Live |
+| `/login` | LoginPage | Public | ✅ Live |
+| `/register` | RegisterPage | Public | ✅ Live |
+| `/learn/:courseId` | CourseViewer | Public | ✅ Live |
+| `/portal/student` | StudentPortal | Student | ✅ Live |
+| `/portal/company` | CompanyPortal | Company | ✅ Live |
+| `/portal/college` | CollegePortal | College | ✅ Live |
+| `/portal/admin` | AdminPortal | Admin | ✅ Live |
+
+---
+
+## 📊 Platform Statistics (Demo Data)
+
+| Metric | Value |
+|---|---|
+| Active Projects | 2,400+ |
+| Partner Companies | 180+ |
+| Enrolled Students | 45,000+ |
+| Courses Available | 200+ |
+| Expert Mentors | 500+ |
+| Active Internships | 840+ |
+| Events Listed | 12 |
+| Exam Certifications | 9 |
+| Offline Exam Centers | 10 (across TN) |
+| Max Stipend | ₹25,000/month |
+| Average Stipend | ₹12,000–₹18,000/month |
+| Total Prize Pool (Events) | ₹6.5 Lakh+ |
+| Completion Rate | 94% |
+| Pre-Placement Rate | 72% |
+| Certificate Processing | 3 business days |
 
 ---
 
@@ -406,49 +576,6 @@ npm run preview  # Preview production build
 
 ---
 
-## 🗺️ All Routes
-
-| Route | Page | Auth |
-|---|---|---|
-| `/` | HomePage | Public |
-| `/projects` | ProjectsPage | Public |
-| `/courses` | CoursesPage | Public |
-| `/internships` | InternshipsPage | Public |
-| `/mentors` | MentorsPage | Public |
-| `/leaderboard` | LeaderboardPage | Public |
-| `/jobs` | JobPortalPage | Public |
-| `/certificates` | CertificatePage | Public |
-| `/how-it-works` | HowItWorksPage | Public |
-| `/placement-support` | PlacementSupportPage | Public |
-| `/alumni-network` | AlumniNetworkPage | Public |
-| `/login` | LoginPage | Public |
-| `/register` | RegisterPage | Public |
-| `/learn/:courseId` | CourseViewer | Public |
-| `/portal/student` | StudentPortal | Student |
-| `/portal/company` | CompanyPortal | Company |
-| `/portal/college` | CollegePortal | College |
-| `/portal/admin` | AdminPortal | Admin |
-
----
-
-## 📊 Platform Statistics (Demo Data)
-
-| Metric | Value |
-|---|---|
-| Active Projects | 2,400+ |
-| Partner Companies | 180+ |
-| Enrolled Students | 45,000+ |
-| Courses Available | 200+ |
-| Expert Mentors | 500+ |
-| Active Internships | 840+ |
-| Max Stipend | ₹25,000/month |
-| Average Stipend | ₹12,000–₹18,000/month |
-| Completion Rate | 94% |
-| Pre-Placement Rate | 72% |
-| Certificate Processing | 3 business days |
-
----
-
 ## 🔮 Future Roadmap
 
 ### Phase 2 — Next Sprint
@@ -456,7 +583,9 @@ npm run preview  # Preview production build
 - [ ] Email alerts for application status (NodeMailer)
 - [ ] File upload to cloud (Multer + Cloudinary)
 - [ ] Resume PDF parser using AI
-- [ ] Payment gateway (Razorpay) for premium courses
+- [ ] Payment gateway (Razorpay) for paid exams & events
+- [ ] Proctored online exam with webcam monitoring
+- [ ] Admit card PDF generation and download
 
 ### Phase 3 — Mid-term
 - [ ] React Native mobile app
@@ -465,12 +594,29 @@ npm run preview  # Preview production build
 - [ ] Full LMS with quizzes and assignments
 - [ ] Blockchain-verified NFT certificates
 - [ ] Tamil and Hindi full UI translations
+- [ ] Offline exam hall ticket system (QR code scan)
+- [ ] Live leaderboard during hackathons/competitions
 
 ### Phase 4 — Long-term
 - [ ] Expand to all Indian states
-- [ ] Proctored AI-monitored skill assessments
 - [ ] Alumni-to-student automated mentorship matching
 - [ ] B2B API marketplace for company talent sourcing
+- [ ] Company recruitment analytics dashboard
+
+---
+
+## 🔑 localStorage Keys Reference
+
+| Key | Description | Used By |
+|---|---|---|
+| `nm_wishlist` | Saved course IDs (JSON array) | CoursesPage |
+| `nm_saved_projects` | Bookmarked project IDs (JSON array) | ProjectsPage |
+| `nm_saved_events` | Bookmarked event IDs (JSON array) | EventsPage |
+| `nm_registered_events` | Registered event objects | EventsPage |
+| `nm_registered_events` (ids) | Registered event IDs for badge | EventsPage |
+| `nm_exam_registrations` | Exam registration objects with regNo | ExamPortalPage |
+| `nm_token` | JWT auth token | AuthContext |
+| `nm_theme` | 'dark' \| 'light' preference | ThemeContext |
 
 ---
 
@@ -481,8 +627,8 @@ npm run preview  # Preview production build
 | **Developer** | Nithish Ramasamy |
 | **College** | Bannari Amman Institute of Technology |
 | **Branch** | B.Tech Information Technology |
-| **GitHub** | github.com/nithishramasamy2006-create |
+| **GitHub** | [nithishramasamy2006-create](https://github.com/nithishramasamy2006-create) |
 
 ---
 
-*Built with love for Tamil Nadu students — NaanMudhalvan Learning Marketplace © 2024*
+*Built with ❤️ for Tamil Nadu students — NaanMudhalvan Learning Marketplace © 2025 — v2.0*
