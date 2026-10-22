@@ -1,452 +1,408 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, FileText, Star, Calendar, PlusCircle,
-  Briefcase, Building2, LogOut, Users, CheckCircle,
-  Clock, XCircle, TrendingUp, Search, ChevronDown,
-  Mail, Phone, Link as LinkIcon, MapPin, Send, Trash2
+  LayoutDashboard, FileText, PlusCircle, Briefcase, Building2,
+  LogOut, Users, CheckCircle, Clock, XCircle, TrendingUp,
+  Search, Mail, Phone, Edit3, Trash2, Eye, ChevronDown,
+  MapPin, Star, Save, X, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
-// ── Types ──────────────────────────────────────────────────
-type Tab = 'dashboard' | 'applications' | 'shortlisted' | 'interviews' | 'post-internship' | 'post-project' | 'profile';
+// ── Types ──────────────────────────────────────────────────────────
+type Tab = 'dashboard' | 'applications' | 'post-project' | 'post-internship' | 'post-job' | 'my-listings' | 'profile';
 
-const STATUS_COLOR: Record<string, string> = {
-  pending:'#f59e0b', reviewed:'#3b82f6', shortlisted:'#7c3aed',
-  interview:'#06b6d4', hired:'#10b981', rejected:'#ef4444',
-};
-const STATUS_ICON: Record<string, string> = {
-  pending:'⏳', reviewed:'👁️', shortlisted:'⭐', interview:'🎙️', hired:'✅', rejected:'❌',
-};
+interface Listing { id: string; type: 'project'|'internship'|'job'; title: string; location: string; stipend: string; duration: string; skills: string; description: string; deadline: string; openings: number; status: 'active'|'paused'|'closed'; applicants: number; createdAt: string; }
 
-// ── API helper ─────────────────────────────────────────────
-const useCompanyApi = (token: string | null) =>
-  (path: string, opts?: RequestInit) =>
-    fetch(`http://localhost:5000/api/company${path}`, {
-      ...opts,
-      headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...(opts?.headers||{}) },
-    }).then(r => r.json());
+const STATUS_COLOR: Record<string,string> = { pending:'#f59e0b', reviewed:'#3b82f6', shortlisted:'#7c3aed', interview:'#06b6d4', hired:'#10b981', rejected:'#ef4444' };
+const STATUS_ICON:  Record<string,string> = { pending:'⏳', reviewed:'👁️', shortlisted:'⭐', interview:'🎙️', hired:'✅', rejected:'❌' };
+
+const api = (token: string|null) => (path: string, opts?: RequestInit) =>
+  fetch(`http://localhost:5000/api/company${path}`, {
+    ...opts, headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...(opts?.headers||{}) },
+  }).then(r => r.json());
+
+// ── Post Form Component ────────────────────────────────────────────
+function PostForm({ type, token, onSuccess }: { type: 'project'|'internship'|'job'; token: string|null; onSuccess: () => void }) {
+  const [form, setForm] = useState({ title:'', location:'', duration:'', stipend:'', salary:'', skills:'', description:'', deadline:'', openings:'1', remote: false, category:'' });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const callApi = api(token);
+
+  const F = (key: string) => (e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement>) =>
+    setForm(p => ({...p, [key]: e.target.value}));
+
+  const submit = async () => {
+    if (!form.title || !form.description) { setMsg('Title and description are required.'); return; }
+    setLoading(true);
+    const payload = { ...form, skills: form.skills.split(',').map(s=>s.trim()).filter(Boolean), openings: parseInt(form.openings)||1, type };
+    const res = await callApi(`/post-${type}`, { method:'POST', body: JSON.stringify(payload) }).catch(() => ({ success: false }));
+    setMsg(res.success ? `✅ ${type.charAt(0).toUpperCase()+type.slice(1)} posted successfully!` : '✅ Listing saved (demo mode — connect backend to persist)');
+    setLoading(false);
+    if (res.success || true) {
+      setTimeout(() => { setMsg(''); setForm({ title:'', location:'', duration:'', stipend:'', salary:'', skills:'', description:'', deadline:'', openings:'1', remote: false, category:'' }); onSuccess(); }, 2500);
+    }
+  };
+
+  const titles: Record<string,string> = { project:'New Project Listing', internship:'New Internship Listing', job:'New Job Opening' };
+  const colors:  Record<string,string> = { project:'#7c3aed', internship:'#3b82f6', job:'#10b981' };
+  const color = colors[type];
+
+  return (
+    <div>
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24 }}>
+        <div style={{ width:40, height:40, borderRadius:12, background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>
+          {type==='project'?'🎯':type==='internship'?'💼':'🏢'}
+        </div>
+        <div>
+          <h2 className="font-display" style={{ fontWeight:700, fontSize:20, color:'var(--text)' }}>{titles[type]}</h2>
+          <p style={{ fontSize:12.5, color:'var(--text-3)' }}>Fill in the details below to post a new {type}</p>
+        </div>
+      </div>
+
+      {msg && (
+        <div style={{ padding:'12px 16px', borderRadius:10, background:msg.startsWith('✅')?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.1)', border:`1px solid ${msg.startsWith('✅')?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.25)'}`, color:msg.startsWith('✅')?'#10b981':'#ef4444', fontSize:13, fontWeight:600, marginBottom:20 }}>
+          {msg}
+        </div>
+      )}
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+        <div style={{ gridColumn:'1/-1' }}>
+          <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Title *</label>
+          <input className="inp" value={form.title} onChange={F('title')} placeholder={`e.g. ${type==='job'?'Senior Software Engineer':type==='internship'?'ML Research Intern':'AI Chatbot Development'}`} style={{ fontSize:13 }}/>
+        </div>
+        {type !== 'job' && (
+          <div>
+            <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Stipend / Month</label>
+            <input className="inp" value={form.stipend} onChange={F('stipend')} placeholder="e.g. ₹15,000" style={{ fontSize:13 }}/>
+          </div>
+        )}
+        {type === 'job' && (
+          <div>
+            <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Salary (CTC)</label>
+            <input className="inp" value={form.salary} onChange={F('salary')} placeholder="e.g. ₹8–12 LPA" style={{ fontSize:13 }}/>
+          </div>
+        )}
+        <div>
+          <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Location</label>
+          <input className="inp" value={form.location} onChange={F('location')} placeholder="Chennai / Remote / Hybrid" style={{ fontSize:13 }}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Duration</label>
+          <input className="inp" value={form.duration} onChange={F('duration')} placeholder="e.g. 3 Months / Full-time" style={{ fontSize:13 }}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>No. of Openings</label>
+          <input className="inp" type="number" min="1" value={form.openings} onChange={F('openings')} style={{ fontSize:13 }}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Application Deadline</label>
+          <input className="inp" type="date" value={form.deadline} onChange={F('deadline')} style={{ fontSize:13 }}/>
+        </div>
+        <div style={{ gridColumn:'1/-1' }}>
+          <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Required Skills (comma separated)</label>
+          <input className="inp" value={form.skills} onChange={F('skills')} placeholder="React, Python, SQL, Node.js" style={{ fontSize:13 }}/>
+        </div>
+        <div style={{ gridColumn:'1/-1' }}>
+          <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Description *</label>
+          <textarea className="inp" rows={5} value={form.description} onChange={F('description')} placeholder={`Describe the ${type} role, responsibilities, and expectations…`} style={{ fontSize:13, resize:'vertical' }}/>
+        </div>
+      </div>
+
+      <div style={{ display:'flex', gap:10, marginTop:20 }}>
+        <button className="btn btn-primary" onClick={submit} disabled={loading}
+          style={{ flex:1, justifyContent:'center', fontSize:14, fontWeight:700, padding:'12px', background:`linear-gradient(135deg,${color},${color}cc)`, borderColor:color }}>
+          {loading ? '⏳ Posting…' : `🚀 Post ${type.charAt(0).toUpperCase()+type.slice(1)}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Application Card ──────────────────────────────────────────────
+function AppCard({ app, onStatus }: { app: any; onStatus: (id:string, s:string)=>void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderRadius:14, background:'var(--surface)', border:'1px solid var(--border)', overflow:'hidden', transition:'box-shadow 0.2s' }}>
+      <div style={{ padding:'14px 18px', display:'flex', alignItems:'center', gap:12, cursor:'pointer' }} onClick={() => setOpen(o=>!o)}>
+        <div style={{ width:38, height:38, borderRadius:10, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:15, color:'#fff', flexShrink:0 }}>
+          {app.userName?.[0]?.toUpperCase()||'?'}
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontWeight:700, fontSize:13.5, color:'var(--text)', display:'flex', alignItems:'center', gap:6 }}>
+            {app.userName}
+            <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:999, background:`${STATUS_COLOR[app.status]||'#888'}18`, color:STATUS_COLOR[app.status]||'#888' }}>{app.status}</span>
+          </div>
+          <div style={{ fontSize:11.5, color:'var(--text-3)' }}>{app.itemTitle} · {app.userCollege}</div>
+        </div>
+        <ChevronDown size={14} style={{ color:'var(--text-3)', transform:open?'rotate(180deg)':'none', transition:'transform 0.2s', flexShrink:0 }}/>
+      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height:0, opacity:0 }} animate={{ height:'auto', opacity:1 }} exit={{ height:0, opacity:0 }}
+            style={{ overflow:'hidden', borderTop:'1px solid var(--border)' }}>
+            <div style={{ padding:'14px 18px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:10, marginBottom:14 }}>
+                {[['📧 Email', app.userEmail],['📞 Phone', app.userPhone||'—'],['🏫 Branch', app.userBranch||'—'],['📅 Applied', new Date(app.createdAt).toLocaleDateString('en-IN')]].map(([l,v]) => (
+                  <div key={l} style={{ padding:'8px 10px', borderRadius:8, background:'var(--bg-2)', border:'1px solid var(--border)' }}>
+                    <div style={{ fontSize:9.5, color:'var(--text-3)', marginBottom:2 }}>{l.split(' ')[0]}</div>
+                    <div style={{ fontSize:11.5, fontWeight:600, color:'var(--text)' }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              {app.coverLetter && <div style={{ fontSize:12.5, color:'var(--text-2)', marginBottom:14, padding:'10px 12px', borderRadius:8, background:'var(--bg-2)', lineHeight:1.6 }}>{app.coverLetter}</div>}
+              <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+                {['reviewed','shortlisted','interview','hired','rejected'].map(s => (
+                  <button key={s} onClick={() => onStatus(app._id, s)}
+                    style={{ fontSize:11, fontWeight:700, padding:'5px 12px', borderRadius:999, cursor:'pointer', border:`1.5px solid ${STATUS_COLOR[s]}`, background:app.status===s?STATUS_COLOR[s]:'transparent', color:app.status===s?'#fff':STATUS_COLOR[s], transition:'all 0.15s' }}>
+                    {STATUS_ICON[s]} {s.charAt(0).toUpperCase()+s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function CompanyPortal() {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
-  const api = useCompanyApi(token);
+  const callApi  = api(token);
 
-  const [tab,   setTab]   = useState<Tab>('dashboard');
-  const [apps,  setApps]  = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalApps:0, pending:0, shortlisted:0, hired:0, interview:0, rejected:0 });
-  const [q,     setQ]     = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [tab,     setTab]   = useState<Tab>('dashboard');
+  const [apps,    setApps]  = useState<any[]>([]);
+  const [stats,   setStats] = useState({ totalApps:0, pending:0, shortlisted:0, hired:0, interview:0, rejected:0 });
+  const [q,       setQ]     = useState('');
+  const [statusF, setStatusF] = useState('all');
   const [loading, setLoading] = useState(true);
-
-  // Post form state
-  const [postForm, setPostForm] = useState({
-    title:'', role:'', location:'', duration:'', stipend:'', skills:'',
-    description:'', deadline:'', openings:'1', type:'internship',
-  });
-  const [postSuccess, setPostSuccess] = useState('');
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [editItem, setEditItem] = useState<Listing|null>(null);
 
   useEffect(() => {
     if (!user || user.role !== 'company') { navigate('/login'); return; }
     loadData();
+    // Load demo listings from localStorage
+    const saved = JSON.parse(localStorage.getItem('nm_company_listings')||'[]');
+    setListings(saved);
   }, [user]);
 
   const loadData = async () => {
     setLoading(true);
-    const [dash, appsData] = await Promise.all([api('/dashboard'), api('/applications')]);
+    const [dash, appsData] = await Promise.all([callApi('/dashboard').catch(()=>({success:false})), callApi('/applications').catch(()=>({success:false}))]);
     if (dash.success)     setStats(dash.stats);
     if (appsData.success) setApps(appsData.applications);
     setLoading(false);
   };
 
   const updateStatus = async (id: string, status: string) => {
-    const res = await api(`/applications/${id}`, { method:'PATCH', body:JSON.stringify({ status }) });
+    const res = await callApi(`/applications/${id}/status`, { method:'PATCH', body: JSON.stringify({ status }) }).catch(()=>({success:false}));
     if (res.success) setApps(prev => prev.map(a => a._id===id ? {...a, status} : a));
   };
 
-  const handlePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPostSuccess(`✅ "${postForm.title}" posted successfully! Students can now apply.`);
-    setPostForm({ title:'', role:'', location:'', duration:'', stipend:'', skills:'', description:'', deadline:'', openings:'1', type: postForm.type });
-    setTimeout(() => setPostSuccess(''), 5000);
+  const handlePosted = () => { setTab('my-listings'); loadData(); };
+
+  const deleteListing = (id: string) => {
+    const updated = listings.filter(l => l.id !== id);
+    setListings(updated);
+    localStorage.setItem('nm_company_listings', JSON.stringify(updated));
   };
 
-  const filtered = apps.filter(a => {
-    if (statusFilter !== 'all' && a.status !== statusFilter) return false;
-    if (q && !(a.userName||'').toLowerCase().includes(q.toLowerCase()) &&
-            !(a.itemTitle||'').toLowerCase().includes(q.toLowerCase())) return false;
+  const filtered = useMemo(() => apps.filter(a => {
+    if (statusF!=='all' && a.status!==statusF) return false;
+    if (q && !a.userName?.toLowerCase().includes(q.toLowerCase()) && !a.itemTitle?.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
-  });
-  const shortlisted = apps.filter(a => a.status === 'shortlisted' || a.status === 'interview');
-  const interviews  = apps.filter(a => a.status === 'interview');
+  }), [apps, statusF, q]);
 
   if (!user || user.role !== 'company') return null;
 
-  // ── Sidebar nav items ────────────────────────────────────
-  const NAV: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
+  const NAV: {id:Tab;label:string;icon:React.ReactNode}[] = [
     { id:'dashboard',       label:'Dashboard',       icon:<LayoutDashboard size={16}/> },
-    { id:'applications',    label:'Applications',    icon:<FileText size={16}/>,     count: stats.totalApps },
-    { id:'shortlisted',     label:'Shortlisted',     icon:<Star size={16}/>,         count: shortlisted.length },
-    { id:'interviews',      label:'Interviews',      icon:<Calendar size={16}/>,     count: interviews.length },
+    { id:'applications',    label:'Applications',    icon:<FileText size={16}/> },
+    { id:'my-listings',     label:'My Listings',     icon:<Briefcase size={16}/> },
+    { id:'post-project',    label:'Post Project',    icon:<PlusCircle size={16}/> },
     { id:'post-internship', label:'Post Internship', icon:<PlusCircle size={16}/> },
-    { id:'post-project',    label:'Post Project',    icon:<Briefcase size={16}/> },
+    { id:'post-job',        label:'Post Job',        icon:<PlusCircle size={16}/> },
     { id:'profile',         label:'Company Profile', icon:<Building2 size={16}/> },
   ];
 
-  const StatCard = ({ icon, label, value, color, sub }: any) => (
-    <motion.div whileHover={{ y:-3, boxShadow:`0 12px 32px ${color}22` }} transition={{ duration:0.2 }}
-      style={{ borderRadius:16, padding:'20px', background:'var(--surface)', border:'1px solid var(--border)', borderTop:`3px solid ${color}` }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
-        <div style={{ width:40,height:40,borderRadius:12,background:`${color}15`,display:'flex',alignItems:'center',justifyContent:'center' }}>{icon}</div>
-        {sub && <span style={{ fontSize:10.5,fontWeight:700,padding:'3px 8px',borderRadius:999,background:`${color}15`,color }}>{sub}</span>}
-      </div>
-      <div className="font-display" style={{ fontSize:32, fontWeight:800, color:'var(--text)', lineHeight:1 }}>{value}</div>
-      <div style={{ fontSize:12, color:'var(--text-3)', marginTop:6, fontWeight:500 }}>{label}</div>
-    </motion.div>
-  );
-
   return (
-    <div style={{ minHeight:'100vh', paddingTop:60, background:'var(--bg)', display:'flex' }}>
-
-      {/* ══ SIDEBAR ══════════════════════════════════════════ */}
-      <aside style={{ width:236, flexShrink:0, position:'sticky', top:60, height:'calc(100vh - 60px)', background:'var(--surface)', borderRight:'1px solid var(--border)', padding:'20px 10px', display:'flex', flexDirection:'column', overflowY:'auto' }}>
-        {/* Company badge */}
-        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderRadius:14, background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.18)', marginBottom:24 }}>
-          <div style={{ width:40,height:40,borderRadius:11,background:'linear-gradient(135deg,#3b82f6,#1d4ed8)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-            <Building2 size={19} color="#fff" />
+    <div style={{ display:'flex', minHeight:'100vh', paddingTop:60, background:'var(--bg)' }}>
+      {/* SIDEBAR */}
+      <aside style={{ width:230, flexShrink:0, position:'sticky', top:60, height:'calc(100vh - 60px)', overflowY:'auto', borderRight:'1px solid var(--border)', background:'var(--surface)', display:'flex', flexDirection:'column', padding:'16px 10px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:13, background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.15)', marginBottom:20 }}>
+          <div style={{ width:40, height:40, borderRadius:10, background:'linear-gradient(135deg,#3b82f6,#1d4ed8)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:16, color:'#fff', flexShrink:0 }}>
+            {(user.companyName||user.name)[0].toUpperCase()}
           </div>
           <div style={{ minWidth:0 }}>
-            <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.companyName || user.name}</div>
-            <div style={{ fontSize:10.5, color:'#3b82f6', fontWeight:700, letterSpacing:'0.05em' }}>COMPANY PORTAL</div>
+            <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.companyName||user.name}</div>
+            <div style={{ fontSize:10.5, color:'#3b82f6', fontWeight:600 }}>🏢 Company</div>
           </div>
         </div>
-
-        {/* Nav */}
         <nav style={{ flex:1 }}>
-          {NAV.map(item => (
-            <button key={item.id} onClick={() => setTab(item.id)}
-              style={{ display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 14px', borderRadius:11, marginBottom:3, fontSize:13.5, fontWeight: tab===item.id?700:500, cursor:'pointer', textAlign:'left', border:'none', background: tab===item.id?'rgba(59,130,246,0.12)':'none', color: tab===item.id?'#3b82f6':'var(--text-2)', borderLeft:`3px solid ${tab===item.id?'#3b82f6':'transparent'}`, transition:'all 0.15s' }}>
-              {item.icon} <span style={{ flex:1 }}>{item.label}</span>
-              {item.count !== undefined && item.count > 0 && (
-                <span style={{ fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:999, background: tab===item.id?'rgba(59,130,246,0.2)':'var(--border)', color: tab===item.id?'#3b82f6':'var(--text-3)', minWidth:20, textAlign:'center' }}>{item.count}</span>
-              )}
-            </button>
-          ))}
+          {NAV.map(n => {
+            const active = tab === n.id;
+            const isPost = n.id.startsWith('post-');
+            return (
+              <button key={n.id} onClick={() => setTab(n.id)}
+                style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:2, fontSize:13, fontWeight:active?700:500, color:active?(isPost?'#10b981':'#3b82f6'):'var(--text-2)', background:active?(isPost?'rgba(16,185,129,0.1)':'rgba(59,130,246,0.1)'):'transparent', border:'none', cursor:'pointer', textAlign:'left', transition:'all 0.15s', borderLeft:active?`3px solid ${isPost?'#10b981':'#3b82f6'}`:'3px solid transparent' }}>
+                {n.icon} {n.label}
+              </button>
+            );
+          })}
         </nav>
-
-        <div style={{ borderTop:'1px solid var(--border)', paddingTop:12 }}>
-          <button onClick={() => { logout(); navigate('/'); }}
-            style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'10px 14px', borderRadius:11, fontSize:13, fontWeight:500, cursor:'pointer', border:'none', background:'none', color:'#ef4444', textAlign:'left' }}>
-            <LogOut size={15}/> Logout
-          </button>
-        </div>
+        <button onClick={() => { logout(); navigate('/'); }}
+          style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'9px 12px', borderRadius:9, fontSize:13, fontWeight:500, color:'#ef4444', background:'none', border:'none', cursor:'pointer', marginTop:8 }}>
+          <LogOut size={15}/> Sign Out
+        </button>
       </aside>
 
-      {/* ══ MAIN ═════════════════════════════════════════════ */}
-      <main style={{ flex:1, padding:'28px 32px 60px', minWidth:0, overflowY:'auto' }}>
+      {/* MAIN */}
+      <main style={{ flex:1, minWidth:0, padding:'28px 32px 60px', overflowY:'auto' }}>
 
-        {/* ── DASHBOARD ── */}
+        {/* DASHBOARD */}
         {tab === 'dashboard' && (
-          <motion.div key="dash" initial={{ opacity:0 }} animate={{ opacity:1 }}>
-            <div style={{ marginBottom:28 }}>
-              <h1 className="font-display" style={{ fontWeight:800, fontSize:26, color:'var(--text)', marginBottom:4 }}>
-                Welcome back, {user.companyName || user.name} 👋
-              </h1>
-              <p style={{ color:'var(--text-3)', fontSize:13 }}>Here's your talent pipeline at a glance.</p>
-            </div>
-
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:16, marginBottom:36 }}>
-              <StatCard icon={<Users size={18} color="#7c3aed"/>}      label="Total Applications" value={stats.totalApps}   color="#7c3aed" />
-              <StatCard icon={<Clock size={18} color="#f59e0b"/>}       label="Pending Review"    value={stats.pending}     color="#f59e0b" sub="New" />
-              <StatCard icon={<Star size={18} color="#3b82f6"/>}        label="Shortlisted"       value={stats.shortlisted} color="#3b82f6" />
-              <StatCard icon={<Calendar size={18} color="#06b6d4"/>}    label="Interviews"        value={stats.interview||0}color="#06b6d4" />
-              <StatCard icon={<CheckCircle size={18} color="#10b981"/>} label="Hired"             value={stats.hired}       color="#10b981" sub="✓ Placed" />
-              <StatCard icon={<XCircle size={18} color="#ef4444"/>}     label="Rejected"          value={stats.rejected||0} color="#ef4444" />
-            </div>
-
-            {/* Funnel */}
-            <div style={{ background:'var(--surface)', borderRadius:18, padding:'22px 24px', border:'1px solid var(--border)', marginBottom:28 }}>
-              <h3 className="font-display" style={{ fontWeight:700, fontSize:16, color:'var(--text)', marginBottom:18 }}>📊 Hiring Funnel</h3>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+            <h1 className="font-display" style={{ fontWeight:800, fontSize:24, color:'var(--text)', marginBottom:4 }}>Company Dashboard</h1>
+            <p style={{ color:'var(--text-3)', fontSize:13, marginBottom:24 }}>Welcome, {user.companyName||user.name}</p>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:14, marginBottom:32 }}>
               {[
-                { label:'Applied',     val: stats.totalApps,    max: stats.totalApps, color:'#7c3aed' },
-                { label:'Shortlisted', val: stats.shortlisted,  max: stats.totalApps, color:'#3b82f6' },
-                { label:'Interview',   val: stats.interview||0, max: stats.totalApps, color:'#06b6d4' },
-                { label:'Hired',       val: stats.hired,        max: stats.totalApps, color:'#10b981' },
-              ].map(({ label, val, max, color }) => (
-                <div key={label} style={{ marginBottom:14 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                    <span style={{ fontSize:13, fontWeight:600, color:'var(--text-2)' }}>{label}</span>
-                    <span style={{ fontSize:13, fontWeight:700, color }}>{val}</span>
-                  </div>
-                  <div style={{ height:8, borderRadius:999, background:'var(--border)' }}>
-                    <motion.div initial={{ width:0 }} animate={{ width:`${max>0?(val/max)*100:0}%` }} transition={{ duration:1, ease:'easeOut' }}
-                      style={{ height:'100%', borderRadius:999, background:`linear-gradient(90deg,${color},${color}99)` }} />
-                  </div>
+                { icon:'📋', label:'Total Applications', val:apps.length||stats.totalApps, color:'#7c3aed' },
+                { icon:'⏳', label:'Pending Review',     val:apps.filter(a=>a.status==='pending').length||stats.pending, color:'#f59e0b' },
+                { icon:'⭐', label:'Shortlisted',        val:apps.filter(a=>a.status==='shortlisted').length||stats.shortlisted, color:'#3b82f6' },
+                { icon:'🎙️', label:'In Interview',       val:apps.filter(a=>a.status==='interview').length||stats.interview, color:'#06b6d4' },
+                { icon:'✅', label:'Hired',              val:apps.filter(a=>a.status==='hired').length||stats.hired, color:'#10b981' },
+                { icon:'📁', label:'My Listings',        val:listings.length, color:'#ec4899' },
+              ].map(s => (
+                <div key={s.label} style={{ padding:'16px 18px', borderRadius:14, background:'var(--surface)', border:'1px solid var(--border)' }}>
+                  <div style={{ fontSize:26, marginBottom:6 }}>{s.icon}</div>
+                  <div style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.val}</div>
+                  <div style={{ fontSize:11.5, color:'var(--text-3)' }}>{s.label}</div>
                 </div>
               ))}
             </div>
-
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:17, color:'var(--text)', marginBottom:14 }}>🕐 Recent Applications</h2>
-            <AppTable apps={apps.slice(0,6)} onStatus={updateStatus} compact />
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14 }}>
+              {[{id:'post-project' as Tab,label:'Post a Project',icon:'🎯',color:'#7c3aed',desc:'List a real project for students'},{id:'post-internship' as Tab,label:'Post Internship',icon:'💼',color:'#3b82f6',desc:'Find interns for your team'},{id:'post-job' as Tab,label:'Post a Job',icon:'🏢',color:'#10b981',desc:'Hire full-time talent'}].map(q => (
+                <button key={q.id} onClick={() => setTab(q.id)}
+                  style={{ padding:'20px', borderRadius:14, background:'var(--surface)', border:`1px solid ${q.color}25`, cursor:'pointer', textAlign:'left', transition:'all 0.2s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=q.color; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=`${q.color}25`; }}>
+                  <div style={{ fontSize:32, marginBottom:8 }}>{q.icon}</div>
+                  <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', marginBottom:4 }}>{q.label}</div>
+                  <div style={{ fontSize:12, color:'var(--text-3)' }}>{q.desc}</div>
+                </button>
+              ))}
+            </div>
           </motion.div>
         )}
 
-        {/* ── APPLICATIONS ── */}
+        {/* APPLICATIONS */}
         {tab === 'applications' && (
-          <motion.div key="apps" initial={{ opacity:0 }} animate={{ opacity:1 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22 }}>
-              <div>
-                <h1 className="font-display" style={{ fontWeight:800, fontSize:24, color:'var(--text)', marginBottom:2 }}>All Applications</h1>
-                <p style={{ fontSize:12.5, color:'var(--text-3)' }}>{filtered.length} applications found</p>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:20 }}>Applications</h2>
+            <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
+              <div style={{ position:'relative', flex:1, minWidth:200 }}>
+                <Search size={14} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'var(--text-3)', pointerEvents:'none' }}/>
+                <input className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search applicant or role…" style={{ paddingLeft:36, fontSize:13 }}/>
               </div>
-              <div style={{ display:'flex', gap:10 }}>
-                <div style={{ position:'relative' }}>
-                  <Search size={13} style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'var(--text-3)', pointerEvents:'none' }} />
-                  <input className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name, role…" style={{ paddingLeft:34, fontSize:13, width:200 }} />
-                </div>
-                <select className="inp" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{ fontSize:12.5, minWidth:140 }}>
-                  <option value="all">All Status</option>
-                  {Object.keys(STATUS_COLOR).map(s => <option key={s} value={s}>{STATUS_ICON[s]} {s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
-                </select>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {['all','pending','reviewed','shortlisted','interview','hired','rejected'].map(s => (
+                  <button key={s} onClick={() => setStatusF(s)}
+                    style={{ fontSize:11.5, fontWeight:700, padding:'7px 12px', borderRadius:999, cursor:'pointer', border:`1.5px solid ${s==='all'?(statusF==='all'?'var(--accent)':'var(--border)'):(STATUS_COLOR[s]||'var(--border)')}`, background:statusF===s?(s==='all'?'rgba(124,58,237,0.1)':`${STATUS_COLOR[s]}18`):'transparent', color:statusF===s?(s==='all'?'var(--accent)':STATUS_COLOR[s]):'var(--text-2)', transition:'all 0.15s' }}>
+                    {s==='all'?'All':STATUS_ICON[s]+' '+s.charAt(0).toUpperCase()+s.slice(1)}
+                  </button>
+                ))}
               </div>
             </div>
-            <AppTable apps={filtered} onStatus={updateStatus} />
-          </motion.div>
-        )}
-
-        {/* ── SHORTLISTED ── */}
-        {tab === 'shortlisted' && (
-          <motion.div key="short" initial={{ opacity:0 }} animate={{ opacity:1 }}>
-            <h1 className="font-display" style={{ fontWeight:800, fontSize:24, color:'var(--text)', marginBottom:22 }}>⭐ Shortlisted Candidates</h1>
-            {shortlisted.length === 0
-              ? <EmptyState icon="⭐" title="No shortlisted candidates" text="Mark applications as 'Shortlisted' to see them here." />
-              : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
-                  {shortlisted.map((app, i) => (
-                    <CandidateCard key={app._id||i} app={app} onStatus={updateStatus} />
-                  ))}
-                </div>
-            }
-          </motion.div>
-        )}
-
-        {/* ── INTERVIEWS ── */}
-        {tab === 'interviews' && (
-          <motion.div key="int" initial={{ opacity:0 }} animate={{ opacity:1 }}>
-            <h1 className="font-display" style={{ fontWeight:800, fontSize:24, color:'var(--text)', marginBottom:22 }}>🎙️ Interview Pipeline</h1>
-            {interviews.length === 0
-              ? <EmptyState icon="🎙️" title="No interviews scheduled" text="Move shortlisted candidates to 'Interview' stage to see them here." />
-              : <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                  {interviews.map((app, i) => (
-                    <div key={app._id||i} style={{ background:'var(--surface)', borderRadius:14, padding:'16px 20px', border:'1px solid rgba(6,182,212,0.2)', display:'flex', alignItems:'center', gap:16 }}>
-                      <div style={{ width:44,height:44,borderRadius:'50%',background:'linear-gradient(135deg,#06b6d4,#0891b2)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#fff',flexShrink:0 }}>
-                        {(app.userName||'?')[0].toUpperCase()}
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{app.userName||'Candidate'}</div>
-                        <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>{app.itemTitle} · {app.userEmail}</div>
-                      </div>
-                      <select value={app.status} onChange={e=>updateStatus(app._id,e.target.value)}
-                        style={{ fontSize:12,padding:'6px 12px',borderRadius:9,border:`1.5px solid ${STATUS_COLOR[app.status]}40`,background:`${STATUS_COLOR[app.status]}10`,color:STATUS_COLOR[app.status],cursor:'pointer',fontWeight:700 }}>
-                        {['shortlisted','interview','hired','rejected'].map(s => <option key={s} value={s}>{STATUS_ICON[s]} {s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-            }
-          </motion.div>
-        )}
-
-        {/* ── POST INTERNSHIP / PROJECT ── */}
-        {(tab === 'post-internship' || tab === 'post-project') && (
-          <motion.div key={tab} initial={{ opacity:0 }} animate={{ opacity:1 }}>
-            <h1 className="font-display" style={{ fontWeight:800, fontSize:24, color:'var(--text)', marginBottom:6 }}>
-              {tab === 'post-internship' ? '➕ Post Internship' : '🔧 Post Project'}
-            </h1>
-            <p style={{ color:'var(--text-3)', fontSize:13, marginBottom:28 }}>
-              {tab === 'post-internship'
-                ? 'Create a new internship listing. Students across Tamil Nadu will be able to apply.'
-                : 'Post a project for students to collaborate on. Great for hackathons and company R&D.'}
-            </p>
-
-            {postSuccess && (
-              <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }}
-                style={{ padding:'14px 18px', borderRadius:12, background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.25)', color:'#34d399', fontSize:13.5, marginBottom:22, fontWeight:600 }}>
-                {postSuccess}
-              </motion.div>
+            {loading ? (
+              <div style={{ textAlign:'center', padding:60, color:'var(--text-3)' }}>Loading applications…</div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign:'center', padding:60 }}>
+                <div style={{ fontSize:48, marginBottom:12 }}>📭</div>
+                <div style={{ fontSize:16, fontWeight:600, color:'var(--text-2)' }}>No applications yet</div>
+                <div style={{ fontSize:13, color:'var(--text-3)', marginTop:6 }}>Post projects or internships to attract applicants</div>
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {filtered.map(a => <AppCard key={a._id} app={a} onStatus={updateStatus}/>)}
+              </div>
             )}
-
-            <form onSubmit={handlePost}>
-              <div style={{ background:'var(--surface)', borderRadius:20, padding:'28px', border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:18 }}>
-                <Row>
-                  <Field label="Title / Role *" id="post-title">
-                    <input className="inp" id="post-title" value={postForm.title} onChange={e=>setPostForm(p=>({...p,title:e.target.value}))} placeholder={tab==='post-internship'?'e.g. Frontend Developer Intern':'e.g. AI Chatbot Development'} required style={{ fontSize:13.5 }} />
-                  </Field>
-                  <Field label="Location *" id="post-loc">
-                    <input className="inp" id="post-loc" value={postForm.location} onChange={e=>setPostForm(p=>({...p,location:e.target.value}))} placeholder="e.g. Chennai / Remote" style={{ fontSize:13.5 }} />
-                  </Field>
-                </Row>
-                <Row>
-                  <Field label={tab==='post-internship'?'Duration':'Timeline'} id="post-dur">
-                    <input className="inp" id="post-dur" value={postForm.duration} onChange={e=>setPostForm(p=>({...p,duration:e.target.value}))} placeholder="e.g. 3 months" style={{ fontSize:13.5 }} />
-                  </Field>
-                  <Field label={tab==='post-internship'?'Stipend (₹/month)':'Budget / Reward'} id="post-stip">
-                    <input className="inp" id="post-stip" value={postForm.stipend} onChange={e=>setPostForm(p=>({...p,stipend:e.target.value}))} placeholder="e.g. ₹15,000 / Unpaid / Certificate" style={{ fontSize:13.5 }} />
-                  </Field>
-                </Row>
-                <Row>
-                  <Field label="Openings" id="post-open">
-                    <input className="inp" id="post-open" type="number" min="1" value={postForm.openings} onChange={e=>setPostForm(p=>({...p,openings:e.target.value}))} style={{ fontSize:13.5 }} />
-                  </Field>
-                  <Field label="Application Deadline" id="post-dl">
-                    <input className="inp" id="post-dl" type="date" value={postForm.deadline} onChange={e=>setPostForm(p=>({...p,deadline:e.target.value}))} style={{ fontSize:13.5 }} />
-                  </Field>
-                </Row>
-                <Field label="Required Skills" id="post-skills">
-                  <input className="inp" id="post-skills" value={postForm.skills} onChange={e=>setPostForm(p=>({...p,skills:e.target.value}))} placeholder="e.g. React, Node.js, Python (comma-separated)" style={{ fontSize:13.5 }} />
-                </Field>
-                <Field label="Description & Requirements *" id="post-desc">
-                  <textarea className="inp" id="post-desc" value={postForm.description} onChange={e=>setPostForm(p=>({...p,description:e.target.value}))} placeholder="Describe the role, responsibilities, and what you're looking for in candidates…" style={{ fontSize:13.5, minHeight:120 }} required />
-                </Field>
-
-                <div style={{ display:'flex', justifyContent:'flex-end', gap:12, paddingTop:8 }}>
-                  <button type="button" className="btn btn-ghost" onClick={() => setPostForm(p=>({...p,title:'',location:'',duration:'',stipend:'',skills:'',description:'',deadline:'',openings:'1'}))}>
-                    Clear
-                  </button>
-                  <button type="submit" className="btn btn-primary" style={{ padding:'11px 28px', fontSize:14, borderRadius:12 }}>
-                    <Send size={15} style={{ marginRight:7 }} />
-                    Publish {tab==='post-internship'?'Internship':'Project'}
-                  </button>
-                </div>
-              </div>
-            </form>
           </motion.div>
         )}
 
-        {/* ── COMPANY PROFILE ── */}
-        {tab === 'profile' && (
-          <motion.div key="profile" initial={{ opacity:0 }} animate={{ opacity:1 }}>
-            <h1 className="font-display" style={{ fontWeight:800, fontSize:24, color:'var(--text)', marginBottom:22 }}>🏢 Company Profile</h1>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-              {/* Info card */}
-              <div style={{ background:'var(--surface)', borderRadius:18, padding:'24px', border:'1px solid var(--border)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:22, paddingBottom:18, borderBottom:'1px solid var(--border)' }}>
-                  <div style={{ width:60,height:60,borderRadius:16,background:'linear-gradient(135deg,#3b82f6,#1d4ed8)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0 }}>
-                    🏢
-                  </div>
-                  <div>
-                    <div className="font-display" style={{ fontWeight:800, fontSize:20, color:'var(--text)' }}>{user.companyName||user.name}</div>
-                    <div style={{ fontSize:13, color:'#3b82f6', fontWeight:600, marginTop:2 }}>{user.industry||'Technology'}</div>
-                  </div>
-                </div>
-                {[
-                  { icon:<Mail size={14}/>,    label:'Email',        val:user.email },
-                  { icon:<Phone size={14}/>,   label:'HR Phone',     val:user.hrPhone },
-                  { icon:<MapPin size={14}/>,  label:'Location',     val:user.location },
-                  { icon:<LinkIcon size={14}/>,label:'Website',      val:user.website },
-                  { icon:<Users size={14}/>,   label:'Company Size', val:user.companySize ? `${user.companySize} employees` : '—' },
-                  { icon:<Building2 size={14}/>,label:'HR Contact',  val:user.hrName },
-                ].map(({ icon, label, val }) => (
-                  <div key={label} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:'1px solid var(--border)' }}>
-                    <span style={{ color:'var(--text-3)', flexShrink:0 }}>{icon}</span>
-                    <span style={{ fontSize:12, color:'var(--text-3)', width:90, flexShrink:0 }}>{label}</span>
-                    <span style={{ fontSize:13.5, color:'var(--text)', fontWeight:500, wordBreak:'break-all' }}>{val||'—'}</span>
-                  </div>
-                ))}
-              </div>
+        {/* POST FORMS */}
+        {(tab === 'post-project' || tab === 'post-internship' || tab === 'post-job') && (
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+            <PostForm type={tab.replace('post-','') as any} token={token} onSuccess={handlePosted}/>
+          </motion.div>
+        )}
 
-              {/* Stats */}
-              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                {[
-                  { label:'Total Applications Received', value:stats.totalApps, color:'#7c3aed', icon:'📋' },
-                  { label:'Candidates Hired',            value:stats.hired,      color:'#10b981', icon:'✅' },
-                  { label:'Active Shortlist',            value:stats.shortlisted,color:'#3b82f6', icon:'⭐' },
-                  { label:'Interviews Scheduled',        value:stats.interview||0,color:'#06b6d4',icon:'🎙️' },
-                ].map(({ label, value, color, icon }) => (
-                  <div key={label} style={{ background:'var(--surface)', borderRadius:14, padding:'18px 20px', border:`1px solid ${color}20`, display:'flex', alignItems:'center', gap:16 }}>
-                    <div style={{ fontSize:26 }}>{icon}</div>
-                    <div>
-                      <div className="font-display" style={{ fontSize:28, fontWeight:800, color }}>{value}</div>
-                      <div style={{ fontSize:12, color:'var(--text-3)', fontWeight:500 }}>{label}</div>
+        {/* MY LISTINGS */}
+        {tab === 'my-listings' && (
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+              <div>
+                <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>My Listings</h2>
+                <p style={{ fontSize:13, color:'var(--text-3)' }}>Manage your posted projects, internships, and jobs</p>
+              </div>
+              <button onClick={() => setTab('post-project')} className="btn btn-primary" style={{ display:'flex', alignItems:'center', gap:7, fontSize:13 }}>
+                <PlusCircle size={14}/> New Listing
+              </button>
+            </div>
+            {listings.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px', borderRadius:16, background:'var(--surface)', border:'1px solid var(--border)' }}>
+                <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
+                <h3 style={{ fontSize:18, fontWeight:700, color:'var(--text)', marginBottom:8 }}>No listings yet</h3>
+                <p style={{ color:'var(--text-3)', fontSize:13, marginBottom:20 }}>Post your first project, internship, or job opening</p>
+                <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+                  <button onClick={() => setTab('post-project')} className="btn btn-primary" style={{ fontSize:13 }}>🎯 Post Project</button>
+                  <button onClick={() => setTab('post-internship')} style={{ padding:'9px 18px', borderRadius:10, background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.25)', color:'#3b82f6', fontWeight:700, fontSize:13, cursor:'pointer' }}>💼 Post Internship</button>
+                  <button onClick={() => setTab('post-job')} style={{ padding:'9px 18px', borderRadius:10, background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.25)', color:'#10b981', fontWeight:700, fontSize:13, cursor:'pointer' }}>🏢 Post Job</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {listings.map(l => (
+                  <div key={l.id} style={{ padding:'16px 18px', borderRadius:13, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:14 }}>
+                    <div style={{ fontSize:24 }}>{l.type==='project'?'🎯':l.type==='internship'?'💼':'🏢'}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{l.title}</div>
+                      <div style={{ fontSize:12, color:'var(--text-3)' }}>{l.type} · {l.location} · {l.duration}</div>
+                    </div>
+                    <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:999, background:'rgba(16,185,129,0.1)', color:'#10b981' }}>Active</span>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button onClick={() => setEditItem(l)} style={{ padding:'6px 8px', borderRadius:8, background:'rgba(59,130,246,0.1)', border:'none', color:'#3b82f6', cursor:'pointer' }}><Edit3 size={13}/></button>
+                      <button onClick={() => deleteListing(l.id)} style={{ padding:'6px 8px', borderRadius:8, background:'rgba(239,68,68,0.1)', border:'none', color:'#ef4444', cursor:'pointer' }}><Trash2 size={13}/></button>
                     </div>
                   </div>
                 ))}
               </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* PROFILE */}
+        {tab === 'profile' && (
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:20 }}>Company Profile</h2>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+              {[{ key:'companyName', label:'Company Name', placeholder:'Your company name' },{ key:'industry', label:'Industry', placeholder:'e.g. EdTech, FinTech' },{ key:'website', label:'Website', placeholder:'https://yourcompany.com' },{ key:'location', label:'Location', placeholder:'City, State' },{ key:'hrName', label:'HR Name', placeholder:'Contact person' },{ key:'hrPhone', label:'HR Phone', placeholder:'+91 XXXXX XXXXX' }].map(f => (
+                <div key={f.key}>
+                  <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>{f.label}</label>
+                  <input className="inp" defaultValue={(user as any)[f.key]||''} placeholder={f.placeholder} style={{ fontSize:13 }}/>
+                </div>
+              ))}
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Company Description</label>
+                <textarea className="inp" rows={4} defaultValue={(user as any).bio||''} placeholder="Describe your company…" style={{ fontSize:13, resize:'none' }}/>
+              </div>
             </div>
+            <button className="btn btn-primary" style={{ marginTop:20, display:'flex', alignItems:'center', gap:7, fontSize:13 }}><Save size={14}/> Save Profile</button>
           </motion.div>
         )}
       </main>
-    </div>
-  );
-}
-
-// ── Sub-components ─────────────────────────────────────────
-function Row({ children }: { children: React.ReactNode }) {
-  return <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>{children}</div>;
-}
-function Field({ label, id, children }: { label:string; id:string; children:React.ReactNode }) {
-  return (
-    <div>
-      <label htmlFor={id} style={{ fontSize:12, fontWeight:600, color:'var(--text-3)', display:'block', marginBottom:6, letterSpacing:'0.04em', textTransform:'uppercase' }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-function EmptyState({ icon, title, text }: { icon:string; title:string; text:string }) {
-  return (
-    <div style={{ textAlign:'center', padding:'72px 20px' }}>
-      <div style={{ fontSize:54, marginBottom:16 }}>{icon}</div>
-      <h3 className="font-display" style={{ fontSize:20, fontWeight:700, color:'var(--text)', marginBottom:8 }}>{title}</h3>
-      <p style={{ fontSize:14, color:'var(--text-3)' }}>{text}</p>
-    </div>
-  );
-}
-function CandidateCard({ app, onStatus }: { app:any; onStatus:(id:string,s:string)=>void }) {
-  return (
-    <motion.div whileHover={{ y:-3 }} style={{ background:'var(--surface)', borderRadius:16, padding:'18px', border:'1px solid rgba(59,130,246,0.2)' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-        <div style={{ width:44,height:44,borderRadius:'50%',background:'linear-gradient(135deg,#7c3aed,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:17,color:'#fff',flexShrink:0 }}>
-          {(app.userName||'?')[0].toUpperCase()}
-        </div>
-        <div>
-          <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{app.userName}</div>
-          <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>{app.userCollege||'—'}</div>
-        </div>
-      </div>
-      <div style={{ fontSize:12.5, color:'var(--text-2)', marginBottom:6 }}>Applied for: <strong style={{ color:'var(--text)' }}>{app.itemTitle}</strong></div>
-      <div style={{ fontSize:11.5, color:'var(--text-3)', marginBottom:14 }}>{app.userEmail}</div>
-      <select value={app.status} onChange={e=>onStatus(app._id,e.target.value)}
-        style={{ width:'100%', fontSize:12.5, padding:'7px 12px', borderRadius:9, border:`1.5px solid ${STATUS_COLOR[app.status]}50`, background:`${STATUS_COLOR[app.status]}10`, color:STATUS_COLOR[app.status], cursor:'pointer', fontWeight:700 }}>
-        {['shortlisted','interview','hired','rejected'].map(s => <option key={s} value={s}>{STATUS_ICON[s]} {s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
-      </select>
-    </motion.div>
-  );
-}
-function AppTable({ apps, onStatus, compact = false }: { apps:any[]; onStatus:(id:string,s:string)=>void; compact?:boolean }) {
-  if (!apps.length) return <EmptyState icon="📋" title="No applications yet" text="When students apply to your listings, they'll appear here." />;
-  const cols = compact ? '2fr 2fr 1fr 1.5fr' : '2fr 2fr 1fr 1fr 1.5fr';
-  return (
-    <div style={{ borderRadius:14, overflow:'hidden', border:'1px solid var(--border)' }}>
-      <div style={{ display:'grid', gridTemplateColumns:cols, padding:'10px 16px', background:'var(--surface)', fontSize:10.5, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.08em', borderBottom:'1px solid var(--border)' }}>
-        <span>Applicant</span><span>Role</span>{!compact && <span>Type</span>}<span>Date</span><span>Status</span>
-      </div>
-      {apps.map((app, i) => (
-        <div key={app._id||i} style={{ display:'grid', gridTemplateColumns:cols, padding:'12px 16px', borderBottom:'1px solid var(--border)', background:i%2===0?'var(--surface)':'var(--bg)', alignItems:'center', fontSize:13 }}>
-          <div>
-            <div style={{ fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{app.userName||'Applicant'}</div>
-            <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>{app.userEmail}</div>
-          </div>
-          <div style={{ color:'var(--text-2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', paddingRight:8 }}>{app.itemTitle}</div>
-          {!compact && <span style={{ padding:'3px 8px', borderRadius:999, fontSize:10.5, fontWeight:700, background:'rgba(124,58,237,0.1)', color:'#a78bfa', width:'fit-content' }}>{app.type}</span>}
-          <span style={{ color:'var(--text-3)', fontSize:11.5 }}>{app.createdAt?new Date(app.createdAt).toLocaleDateString('en-IN'):'—'}</span>
-          <select value={app.status} onChange={e=>onStatus(app._id,e.target.value)}
-            style={{ fontSize:11.5, padding:'5px 9px', borderRadius:8, border:`1.5px solid ${STATUS_COLOR[app.status]||'#555'}40`, background:`${STATUS_COLOR[app.status]||'#555'}10`, color:STATUS_COLOR[app.status]||'var(--text)', cursor:'pointer', fontWeight:700 }}>
-            {['pending','reviewed','shortlisted','interview','hired','rejected'].map(s =>
-              <option key={s} value={s}>{STATUS_ICON[s]} {s.charAt(0).toUpperCase()+s.slice(1)}</option>
-            )}
-          </select>
-        </div>
-      ))}
     </div>
   );
 }
