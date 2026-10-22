@@ -366,12 +366,14 @@ export default function CollegePortal() {
           </motion.div>
         )}
 
-        {/* COLLEGE EVENTS */}
+        {/* COLLEGE EVENTS — Creator & Editor */}
         {tab === 'events' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>College Events</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Events you create appear on the <strong>/events</strong> page for all students to register</p>
-            <ContentManager type="event" author={collegeId} accentColor="#10b981" onDataChange={() => setTab(t => t)}/>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>College Events — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>
+              Create, edit, and delete college events. Students register via <strong>/events</strong> — registrations appear in your <strong>Registrations</strong> tab.
+            </p>
+            <ContentManager type="event" author={collegeId} accentColor="#10b981" />
           </motion.div>
         )}
 

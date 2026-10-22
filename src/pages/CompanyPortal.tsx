@@ -307,41 +307,40 @@ export default function CompanyPortal() {
           </motion.div>
         )}
 
-        {/* ── CONTENT MANAGERS ── */}
         {tab === 'jobs' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Job Openings</h2>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Job Openings — Creator & Editor</h2>
             <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>
-              Students can apply from <strong>/jobs</strong> page — applications appear in your Applications tab
+              Create, edit, and delete job listings. Students apply via the <strong>/jobs</strong> page — accepted applicants appear in your <strong>Applications</strong> tab.
             </p>
-            <ContentManager type="job" author={companyId} accentColor="#10b981" onDataChange={loadApps}/>
+            <ContentManager type="job" author={companyId} accentColor="#10b981" />
           </motion.div>
         )}
         {tab === 'internships' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Internships</h2>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Internships — Creator & Editor</h2>
             <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>
-              Students can apply from <strong>/internships</strong> page — applications appear here
+              Create, edit, and delete internship listings. Students apply via <strong>/internships</strong> — applications land in your <strong>Applications</strong> tab.
             </p>
-            <ContentManager type="internship" author={companyId} accentColor="#3b82f6" onDataChange={loadApps}/>
+            <ContentManager type="internship" author={companyId} accentColor="#3b82f6" />
           </motion.div>
         )}
         {tab === 'projects' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Projects</h2>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Projects — Creator & Editor</h2>
             <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>
-              Students can apply from <strong>/projects</strong> page — applications appear here
+              Create, edit, and delete project listings. Students apply via <strong>/projects</strong> — applications land in your <strong>Applications</strong> tab.
             </p>
-            <ContentManager type="project" author={companyId} accentColor="#7c3aed" onDataChange={loadApps}/>
+            <ContentManager type="project" author={companyId} accentColor="#7c3aed" />
           </motion.div>
         )}
         {tab === 'events' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Events</h2>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Events — Creator & Editor</h2>
             <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>
-              Students can register from <strong>/events</strong> page — registrations appear in Applications
+              Create, edit, and delete events. Students register via <strong>/events</strong> — registrations appear in your <strong>Applications</strong> tab.
             </p>
-            <ContentManager type="event" author={companyId} accentColor="#f59e0b" onDataChange={loadApps}/>
+            <ContentManager type="event" author={companyId} accentColor="#f59e0b" />
           </motion.div>
         )}
 

@@ -284,43 +284,43 @@ export default function AdminPortal() {
         {/* CONTENT MANAGERS */}
         {tab === 'exams' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Exam Management</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Exams you create here appear on the <strong>/exams</strong> page for all students</p>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Exam Management — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and publish exams. They appear on the <strong>/exams</strong> page for students to register.</p>
             <ContentManager type="exam" accentColor="#8b5cf6"/>
           </motion.div>
         )}
         {tab === 'events' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Event Management</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Events appear on the <strong>/events</strong> page for all students</p>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Event Management — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and publish events. They appear on the <strong>/events</strong> page for students to register.</p>
             <ContentManager type="event" accentColor="#f59e0b"/>
           </motion.div>
         )}
         {tab === 'courses' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Course Management</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Courses appear on the <strong>/courses</strong> page for all students</p>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Course Management — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and publish courses. They appear on the <strong>/courses</strong> page for students to enroll.</p>
             <ContentManager type="course" accentColor="#06b6d4"/>
           </motion.div>
         )}
         {tab === 'projects' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Project Management</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Projects appear on the <strong>/projects</strong> page</p>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Project Management — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and publish projects. Students apply via <strong>/projects</strong> — applications appear in <strong>Portal Applications</strong>.</p>
             <ContentManager type="project" accentColor="#7c3aed"/>
           </motion.div>
         )}
         {tab === 'internships' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Internship Management</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Internships appear on the <strong>/internships</strong> page</p>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Internship Management — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and publish internships. Students apply via <strong>/internships</strong> — applications appear in <strong>Portal Applications</strong>.</p>
             <ContentManager type="internship" accentColor="#3b82f6"/>
           </motion.div>
         )}
         {tab === 'jobs' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Job Management</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Jobs appear on the <strong>/jobs</strong> page</p>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Job Management — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and publish job listings. Students apply via <strong>/jobs</strong> — applications appear in <strong>Portal Applications</strong>.</p>
             <ContentManager type="job" accentColor="#10b981"/>
           </motion.div>
         )}
