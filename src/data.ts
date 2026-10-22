@@ -8,6 +8,7 @@ export const NAV_ITEMS = [
   { path: '/courses',      label: 'Courses' },
   { path: '/internships',  label: 'Internships' },
   { path: '/events',       label: '🎯 Events' },
+  { path: '/exams',        label: '📋 Exams' },
   { path: '/jobs',         label: '💼 Jobs' },
   { path: '/mentors',      label: 'Mentors' },
   { path: '/leaderboard',  label: 'Leaderboard' },

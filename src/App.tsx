@@ -26,6 +26,7 @@ const AlumniNetworkPage  = lazy(() => import('./pages/AlumniNetworkPage'));
 const CourseViewer       = lazy(() => import('./pages/CourseViewer'));
 const JobPortalPage      = lazy(() => import('./pages/JobPortalPage'));
 const EventsPage         = lazy(() => import('./pages/EventsPage'));
+const ExamPortalPage     = lazy(() => import('./pages/ExamPortalPage'));
 
 // ── Error Boundary — prevents full black screen on runtime errors ──
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -121,6 +122,7 @@ export default function App() {
                     <Route path="/portal/admin"    element={<AdminPortal />} />
                     <Route path="/jobs"            element={<JobPortalPage />} />
                     <Route path="/events"          element={<EventsPage />} />
+                    <Route path="/exams"           element={<ExamPortalPage />} />
                     <Route path="/learn/:courseId" element={<CourseViewer />} />
                     <Route path="*"               element={<HomePage />} />
                   </Routes>
