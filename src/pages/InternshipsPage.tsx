@@ -4,8 +4,30 @@ import { motion } from 'framer-motion';
 import { Search, MapPin, Clock, Users, Bookmark, Star, ChevronDown } from 'lucide-react';
 import { INTERNSHIPS, CATEGORIES } from '../data';
 import ApplyModal from '../components/ApplyModal';
+import { portalGetAll } from '../portalData';
 
 const TYPES = ['All Types','Paid','Certificate'];
+
+function getAllInternships() {
+  const portal = portalGetAll('internship').filter((i: any) => i.status === 'active').map((i: any, idx: number) => ({
+    id:        80000 + idx,
+    title:     i.title || 'Untitled Internship',
+    company:   i.company || i._author || 'Company',
+    companyLogo: '🏢',
+    category:  'fullstack',
+    type:      i.type || 'Paid',
+    duration:  i.duration || 'Flexible',
+    stipend:   i.stipend || 'Negotiable',
+    location:  i.location || 'Remote',
+    openings:  parseInt(i.openings) || 2,
+    skills:    typeof i.skills === 'string' ? i.skills.split(',').map((s: string) => s.trim()) : (i.skills || []),
+    description: i.description || '',
+    deadline:  i.deadline || '',
+    rating:    4.5,
+    _portal:   true,
+  }));
+  return [...INTERNSHIPS, ...portal];
+}
 
 export default function InternshipsPage() {
   const [q, setQ]       = useState('');
@@ -16,9 +38,9 @@ export default function InternshipsPage() {
   const openApply  = useCallback((i: typeof INTERNSHIPS[0]) => setApplyItem(i), []);
   const closeApply = useCallback(() => setApplyItem(null), []);
 
-  const filtered = useMemo(() => INTERNSHIPS.filter(i => {
-    if (dQ && !i.title.toLowerCase().includes(dQ.toLowerCase()) && !i.company.toLowerCase().includes(dQ.toLowerCase())) return false;
-    if (cat !== 'all' && i.category !== cat) return false;
+  const filtered = useMemo(() => getAllInternships().filter(i => {
+    if (dQ && !i.title.toLowerCase().includes(dQ.toLowerCase()) && !(i.company||'').toLowerCase().includes(dQ.toLowerCase())) return false;
+    if (cat !== 'all' && (i as any).category !== cat) return false;
     if (type !== 'All Types' && i.type !== type) return false;
     return true;
   }), [dQ, cat, type]);

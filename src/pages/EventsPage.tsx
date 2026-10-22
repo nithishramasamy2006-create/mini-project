@@ -9,6 +9,40 @@ import { EVENTS, EVENT_TYPES, type Event, type EventType } from '../eventsData';
 import { useDebounce } from '../hooks';
 import { useNavigate } from 'react-router-dom';
 import ApplyModal from '../components/ApplyModal';
+import { portalGetAll } from '../portalData';
+
+// Merge static + portal events
+function getAllEvents(): Event[] {
+  const portal = portalGetAll('event').filter((e: any) => e.status === 'active').map((e: any, i: number): Event => ({
+    id:                   80000 + i,
+    title:                e.title || 'Untitled Event',
+    type:                 (e.type || 'workshop') as EventType,
+    banner:               '🎤',
+    organizer:            e.organizer || e._author || 'Organizer',
+    organizerLogo:        '🏢',
+    date:                 e.date || '',
+    endDate:              e.endDate || e.date || '',
+    time:                 e.time || 'TBD',
+    duration:             e.duration || '',
+    location:             e.location || 'TBD',
+    mode:                 (e.mode || 'online') as 'online' | 'offline' | 'hybrid',
+    price:                e.price || 'Free',
+    seats:                parseInt(e.seats) || 200,
+    seatsLeft:            parseInt(e.seats) || 200,
+    registrationDeadline: e.registrationDeadline || e.date || '',
+    description:          e.description || '',
+    skills:               typeof e.skills === 'string' ? e.skills.split(',').map((s: string) => s.trim()) : (e.skills || []),
+    tags:                 typeof e.tags === 'string' ? e.tags.split(',').map((s: string) => s.trim()) : (e.tags || []),
+    speakers:             [],
+    prize:                e.prize || '',
+    certificate:          !!e.certificate,
+    featured:             !!e.featured,
+    color:                '#f59e0b',
+    gradient:             'linear-gradient(135deg,#f59e0b,#d97706)',
+    _portal:              true as any,
+  }));
+  return [...EVENTS, ...portal];
+}
 
 // ── Helpers ────────────────────────────────────────────────────
 const MODE_META: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
@@ -191,9 +225,10 @@ export default function EventsPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    return EVENTS.filter(ev => {
+    return getAllEvents().filter(ev => {
       if (type !== 'all' && ev.type !== type) return false;
       if (mode !== 'all' && ev.mode !== mode) return false;
+
       if (priceFilter === 'free' && ev.price !== 'Free') return false;
       if (priceFilter === 'paid' && ev.price === 'Free') return false;
       if (dQ) {

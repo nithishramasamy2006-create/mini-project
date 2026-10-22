@@ -4,10 +4,42 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, X, ChevronDown, Award, Star, Clock, Users, TrendingUp, MapPin, Flame, Bookmark } from 'lucide-react';
 import { PROJECTS, CATEGORIES } from '../data';
 import ApplyModal from '../components/ApplyModal';
+import { portalGetAll } from '../portalData';
 
 const DIFFS = ['All Levels', 'Beginner', 'Intermediate', 'Advanced', 'Expert'];
 const SORTS = [{ val:'newest', label:'Most Recent' },{ val:'stipend', label:'Highest Stipend' },{ val:'rating', label:'Top Rated' }];
 const DIFF_COLOR: Record<string,string> = { Beginner:'#10b981', Intermediate:'#3b82f6', Advanced:'#ec4899', Expert:'#f59e0b' };
+
+// Merge static + portal-created projects
+function getAllProjects() {
+  const portal = portalGetAll('project').filter((p: any) => p.status === 'active').map((p: any, i: number) => ({
+    id:          90000 + i,
+    title:       p.title || 'Untitled Project',
+    company:     p.company || p._author || 'Company',
+    companyLogo: '🏢',
+    category:    p.category || 'fullstack',
+    difficulty:  p.difficulty || 'Intermediate',
+    duration:    p.duration || 'Flexible',
+    stipend:     p.stipend || 'Unpaid',
+    skills:      typeof p.skills === 'string' ? p.skills.split(',').map((s: string) => s.trim()) : (p.skills || []),
+    description: p.description || '',
+    spots:       parseInt(p.spots) || 5,
+    enrolled:    0,
+    rating:      4.5,
+    reviews:     0,
+    mentor:      '',
+    mentorRole:  '',
+    tags:        [],
+    featured:    false,
+    naan_aligned:true,
+    ppo:         !!p.ppo,
+    deadline:    p.deadline || '',
+    location:    p.location || 'Remote',
+    color:       '#7c3aed',
+    _portal:     true,
+  }));
+  return [...PROJECTS, ...portal];
+}
 
 export default function ProjectsPage() {
   const [q, setQ]       = useState('');
@@ -16,7 +48,7 @@ export default function ProjectsPage() {
   const [diff, setDiff] = useState('All Levels');
   const [sort, setSort] = useState('newest');
   const [ppo, setPpo]   = useState(false);
-  const [projects, setProjects] = useState(PROJECTS);
+  const [projects, setProjects] = useState(() => getAllProjects());
   const [applied,  setApplied]  = useState<Set<number>>(new Set());
 
   // ─ Bookmarks: persisted to localStorage ────────────────

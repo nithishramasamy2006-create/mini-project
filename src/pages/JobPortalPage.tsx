@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { BASE } from '../api';
+import { portalGetAll } from '../portalData';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -801,7 +802,18 @@ export default function JobPortalPage() {
   };
 
   const filtered = useMemo(() => {
-    let list = JOBS;
+    const portalJobs = portalGetAll('job').filter((j: any) => j.status === 'active').map((j: any, idx: number): Job => ({
+      id: 60000 + idx, title: j.title || 'Job Opening', company: j.company || j._author || 'Company',
+      logo: j.company?.[0] || 'J', color: '#10b981', location: j.location || 'TBD',
+      type: (j.type || 'Full-time') as Job['type'], experience: j.experience || 'Freshers OK',
+      salary: j.salary || 'Negotiable', posted: 'Recently', deadline: j.deadline || '',
+      category: 'Engineering', skills: typeof j.skills==='string' ? j.skills.split(',').map((s:string)=>s.trim()) : (j.skills||[]),
+      description: j.description || '', responsibilities: [], perks: [],
+      openings: parseInt(j.openings)||1, applicants: 0, views: 0,
+      featured: false, urgent: false, verified: false, rating: 4.5,
+      employees: '', industry: '',
+    }));
+    let list = [...JOBS, ...portalJobs];
     if (tab === 'saved') list = list.filter(j => savedIds.has(j.id));
     if (q) list = list.filter(j =>
       j.title.toLowerCase().includes(q.toLowerCase()) ||
@@ -813,6 +825,7 @@ export default function JobPortalPage() {
     if (exp !== 'All Levels') list = list.filter(j => j.experience === exp);
     return list;
   }, [q, category, jobType, exp, tab, savedIds]);
+
 
   const handleApplySuccess = (app: ApplicationRecord) => {
     setAppliedIds(prev => new Set([...prev, app.itemId]));

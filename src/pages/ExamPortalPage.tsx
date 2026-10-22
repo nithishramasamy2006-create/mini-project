@@ -11,6 +11,46 @@ import {
   type Exam, type ExamCategory, type ExamMode, type ExamCenter
 } from '../examData';
 import { useDebounce } from '../hooks';
+import { portalGetAll } from '../portalData';
+
+// Merge static + portal-created exams
+function getAllExams(): Exam[] {
+  const portal = portalGetAll('exam').filter((e: any) => e.status === 'active').map((e: any, i: number): Exam => ({
+    id:                   70000 + i,
+    title:                e.title || 'Untitled Exam',
+    shortTitle:           e.shortTitle || e.title?.split(' ').slice(0,3).join(' ') || '',
+    category:             (e.category || 'skill-assessment') as ExamCategory,
+    organizer:            e.organizer || 'NaanMudhalvan',
+    organizerLogo:        'NM',
+    mode:                 (e.mode || 'online') as ExamMode,
+    difficulty:           e.difficulty || 'Moderate',
+    examDate:             e.examDate || '',
+    examTime:             e.examTime || '10:00 AM',
+    duration:             e.duration || '120 Minutes',
+    price:                e.price || 'Free',
+    registrationDeadline: e.registrationDeadline || '',
+    admitCardDate:        e.admitCardDate || '',
+    resultDate:           e.resultDate || '',
+    totalQuestions:       parseInt(e.totalQuestions) || 100,
+    totalMarks:           parseInt(e.totalMarks) || 100,
+    negativeMarking:      parseFloat(e.negativeMarking) || 0,
+    languages:            typeof e.languages === 'string' ? e.languages.split(',').map((s: string) => s.trim()) : ['English'],
+    description:          e.description || '',
+    syllabus:             [],
+    eligibility: {
+      branches:  typeof e.eligibilityBranches === 'string' ? e.eligibilityBranches.split(',').map((s: string) => s.trim()) : ['All Branches'],
+      years:     typeof e.eligibilityYears === 'string' ? e.eligibilityYears.split(',').map((s: string) => s.trim()) : ['All Years'],
+      cgpa:      0,
+    },
+    benefits:     typeof e.benefits === 'string' ? e.benefits.split(',').map((s: string) => s.trim()) : [],
+    totalSeats:   10000,
+    registered:   0,
+    color:        '#8b5cf6',
+    gradient:     'linear-gradient(135deg,#8b5cf6,#6d28d9)',
+    _portal:      true as any,
+  }));
+  return [...EXAMS, ...portal];
+}
 
 // ── Helpers ──────────────────────────────────────────────────────
 function daysUntil(d: string) {
@@ -594,7 +634,9 @@ export default function ExamPortalPage() {
     catch { return []; }
   });
 
-  const filtered = useMemo(() => EXAMS.filter(e => {
+  const allExams = useMemo(() => getAllExams(), []);
+
+  const filtered = useMemo(() => allExams.filter(e => {
     if (cat   !== 'all' && e.category !== cat)   return false;
     if (modeF !== 'all' && e.mode    !== modeF)  return false;
     if (priceF === 'free' && e.price !== 'Free')  return false;
@@ -602,16 +644,16 @@ export default function ExamPortalPage() {
     if (dQ) {
       const q2 = dQ.toLowerCase();
       return e.title.toLowerCase().includes(q2) || e.organizer.toLowerCase().includes(q2) ||
-        e.tags.some(t => t.toLowerCase().includes(q2)) || e.category.toLowerCase().includes(q2);
+        (e.tags||[]).some((t:string) => t.toLowerCase().includes(q2)) || e.category.toLowerCase().includes(q2);
     }
     return true;
-  }), [cat, modeF, priceF, dQ]);
+  }), [allExams, cat, modeF, priceF, dQ]);
 
   const stats = [
-    { label: 'Total Exams',     val: EXAMS.length,                           icon: '📋', color: '#7c3aed' },
-    { label: 'Online',          val: EXAMS.filter(e=>e.mode==='online').length, icon: '🌐', color: '#10b981' },
-    { label: 'Offline Centers', val: TN_CENTERS.length,                      icon: '📍', color: '#3b82f6' },
-    { label: 'Free Exams',      val: EXAMS.filter(e=>e.price==='Free').length, icon: '🆓', color: '#f59e0b' },
+    { label: 'Total Exams',     val: allExams.length,                              icon: '📋', color: '#7c3aed' },
+    { label: 'Online',          val: allExams.filter(e=>e.mode==='online').length,  icon: '🌐', color: '#10b981' },
+    { label: 'Offline Centers', val: TN_CENTERS.length,                            icon: '📍', color: '#3b82f6' },
+    { label: 'Free Exams',      val: allExams.filter(e=>e.price==='Free').length,   icon: '🆓', color: '#f59e0b' },
   ];
 
   return (

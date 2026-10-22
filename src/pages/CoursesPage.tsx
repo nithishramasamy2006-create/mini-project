@@ -9,6 +9,29 @@ import {
 } from 'lucide-react';
 import { ALL_COURSES, COURSE_CATEGORIES, IMG_POOL, type CourseItem } from '../courseData';
 import { useAuth } from '../AuthContext';
+import { portalGetAll } from '../portalData';
+
+function getAllCourses(): CourseItem[] {
+  const portal = portalGetAll('course').filter((c: any) => c.status === 'active').map((c: any, i: number): CourseItem => ({
+    id:          50000 + i,
+    title:       c.title || 'Untitled Course',
+    instructor:  c.instructor || 'Instructor',
+    category:    'engineering',
+    subcategory: c.category || 'Computer Science',
+    level:       (c.level || 'Beginner') as CourseItem['level'],
+    duration:    c.duration || 'Self-paced',
+    students:    0,
+    rating:      parseFloat(c.rating) || 4.5,
+    reviews:     0,
+    price:       c.price || 'Free',
+    skills:      typeof c.skills === 'string' ? c.skills.split(',').map((s: string) => s.trim()) : (c.skills || []),
+    imageId:     IMG_POOL[i % IMG_POOL.length],
+    language:    c.language || 'English',
+    certificate: !!c.certificate,
+    _portal:     true as any,
+  }));
+  return [...ALL_COURSES, ...portal];
+}
 
 // ── Image URL builder ─────────────────────────────────────
 const imgUrl = (c: CourseItem) =>
@@ -73,7 +96,7 @@ export default function CoursesPage() {
 
 
   const filtered = useMemo(() => {
-    let list = ALL_COURSES.filter(c => {
+    let list = getAllCourses().filter(c => {
       if (activeCat !== 'all' && c.category !== activeCat) return false;
       if (subcat !== 'All Subcategories' && c.subcategory !== subcat) return false;
       if (dQ && !c.title.toLowerCase().includes(dQ.toLowerCase()) &&
