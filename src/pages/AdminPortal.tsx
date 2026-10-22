@@ -9,9 +9,10 @@ import {
 import { useAuth } from '../AuthContext';
 import ContentManager from '../components/ContentManager';
 import { portalGetAll } from '../portalData';
+import { portalAppGetAll, portalAppUpdateStatus, portalAppDelete, workflowFor, statusColor } from '../portalApplications';
 
 // ── Types ─────────────────────────────────────────────────────────
-type Tab = 'dashboard' | 'users' | 'applications'
+type Tab = 'dashboard' | 'users' | 'applications' | 'portal-apps'
          | 'exams' | 'events' | 'courses'
          | 'projects' | 'internships' | 'jobs'
          | 'announcements' | 'settings';
@@ -108,9 +109,10 @@ export default function AdminPortal() {
 
   // ── NAV groups ─────────────────────────────────────────────────
   const MANAGE_NAV: { id:Tab; label:string; icon:string }[] = [
-    { id:'dashboard',    label:'Dashboard',       icon:'⬛' },
-    { id:'users',        label:'User Management', icon:'👥' },
-    { id:'applications', label:'Applications',    icon:'📋' },
+    { id:'dashboard',    label:'Dashboard',           icon:'⬛' },
+    { id:'users',        label:'User Management',     icon:'👥' },
+    { id:'applications', label:'API Applications',    icon:'📋' },
+    { id:'portal-apps',  label:'Portal Applications', icon:'📨' },
   ];
   const CONTENT_NAV: { id:Tab; label:string; icon:string; count:number }[] = [
     { id:'exams',       label:'Exams',       icon:'📝', count:pExams    },
@@ -322,6 +324,78 @@ export default function AdminPortal() {
             <ContentManager type="job" accentColor="#10b981"/>
           </motion.div>
         )}
+
+        {/* PORTAL APPLICATIONS */}
+        {tab === 'portal-apps' && (() => {
+          const allPortalApps = portalAppGetAll();
+          const byType: Record<string,any[]> = {};
+          allPortalApps.forEach(a => { if (!byType[a.type]) byType[a.type] = []; byType[a.type].push(a); });
+          return (
+            <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+                <div>
+                  <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Portal Applications</h2>
+                  <p style={{ fontSize:13, color:'var(--text-3)' }}>All student applications to company/college portal-created content</p>
+                </div>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:'var(--accent)', padding:'5px 14px', borderRadius:999, background:'rgba(124,58,237,0.1)' }}>{allPortalApps.length} total</span>
+                </div>
+              </div>
+              {allPortalApps.length === 0 ? (
+                <div style={{ textAlign:'center', padding:'60px 20px', borderRadius:14, background:'var(--surface)', border:'1px dashed var(--border)' }}>
+                  <div style={{ fontSize:52, marginBottom:14 }}>📭</div>
+                  <h3 style={{ fontWeight:700, fontSize:18, color:'var(--text)', marginBottom:8 }}>No portal applications yet</h3>
+                  <p style={{ fontSize:13, color:'var(--text-3)' }}>Applications appear when students apply to company/college created listings</p>
+                </div>
+              ) : (
+                Object.entries(byType).map(([type, apps]) => (
+                  <div key={type} style={{ marginBottom:24 }}>
+                    <div style={{ fontWeight:800, fontSize:14, color:'var(--text)', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:16 }}>{type==='job'?'🏢':type==='internship'?'💼':type==='project'?'🎯':type==='event'?'🎪':'📝'}</span>
+                      {type.charAt(0).toUpperCase()+type.slice(1)}s
+                      <span style={{ fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:999, background:'rgba(124,58,237,0.1)', color:'var(--accent)' }}>{apps.length}</span>
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                      {apps.map(app => {
+                        const sc = statusColor(app.status);
+                        const wf = workflowFor(app.type);
+                        return (
+                          <div key={app.id} style={{ borderRadius:11, background:'var(--surface)', border:'1px solid var(--border)', padding:'11px 15px' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:11, flexWrap:'wrap' }}>
+                              <div style={{ width:32, height:32, borderRadius:8, background:`${sc}14`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:sc, fontSize:13, flexShrink:0 }}>
+                                {app.studentName[0]?.toUpperCase()}
+                              </div>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontWeight:700, fontSize:13, color:'var(--text)' }}>{app.studentName}</div>
+                                <div style={{ fontSize:11, color:'var(--text-3)' }}>{app.itemTitle} · {app.itemCompany} · {app.studentEmail}</div>
+                              </div>
+                              <span style={{ fontSize:10.5, fontWeight:700, padding:'3px 9px', borderRadius:999, background:`${sc}15`, color:sc, flexShrink:0 }}>
+                                {app.status.charAt(0).toUpperCase()+app.status.slice(1)}
+                              </span>
+                              <span style={{ fontSize:10.5, color:'var(--text-3)', flexShrink:0 }}>{app.itemAuthor}</span>
+                              <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                                {wf.map(w => (
+                                  <button key={w.status} onClick={() => { portalAppUpdateStatus(app.id, w.status); setTab(t => t); }}
+                                    style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:999, cursor:'pointer', border:`1.5px solid ${w.color}`, background:app.status===w.status?w.color:'transparent', color:app.status===w.status?'#fff':w.color }}>
+                                    {w.label}
+                                  </button>
+                                ))}
+                                <button onClick={() => { portalAppDelete(app.id); setTab(t => t); }}
+                                  style={{ padding:'3px 7px', borderRadius:999, background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#ef4444', cursor:'pointer', fontSize:10 }}>
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </motion.div>
+          );
+        })()}
 
         {/* ANNOUNCEMENTS */}
         {tab === 'announcements' && (

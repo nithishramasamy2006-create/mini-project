@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Search, MapPin, Clock, Users, Bookmark, Star, ChevronDown } from 'lucide-react';
 import { INTERNSHIPS, CATEGORIES } from '../data';
 import ApplyModal from '../components/ApplyModal';
+import PortalApplyModal from '../components/PortalApplyModal';
 import { portalGetAll } from '../portalData';
 
 const TYPES = ['All Types','Paid','Certificate'];
@@ -34,9 +35,13 @@ export default function InternshipsPage() {
   const dQ               = useDebounce(q, 180);
   const [cat, setCat]   = useState('all');
   const [type, setType] = useState('All Types');
-  const [applyItem, setApplyItem] = useState<typeof INTERNSHIPS[0] | null>(null);
-  const openApply  = useCallback((i: typeof INTERNSHIPS[0]) => setApplyItem(i), []);
-  const closeApply = useCallback(() => setApplyItem(null), []);
+  const [applyItem,       setApplyItem]       = useState<typeof INTERNSHIPS[0] | null>(null);
+  const [portalApplyItem, setPortalApplyItem] = useState<any | null>(null);
+  const openApply  = useCallback((i: any) => {
+    if ((i as any)._portal) setPortalApplyItem(i);
+    else setApplyItem(i);
+  }, []);
+  const closeApply = useCallback(() => { setApplyItem(null); setPortalApplyItem(null); }, []);
 
   const filtered = useMemo(() => getAllInternships().filter(i => {
     if (dQ && !i.title.toLowerCase().includes(dQ.toLowerCase()) && !(i.company||'').toLowerCase().includes(dQ.toLowerCase())) return false;
@@ -175,6 +180,16 @@ export default function InternshipsPage() {
         itemTitle={applyItem?.title ?? ''}
         itemCompany={applyItem?.company ?? ''}
         color={applyItem?.color}
+      />
+      <PortalApplyModal
+        open={!!portalApplyItem}
+        onClose={closeApply}
+        type="internship"
+        itemId={portalApplyItem?.id ?? 0}
+        itemTitle={portalApplyItem?.title ?? ''}
+        itemCompany={portalApplyItem?.company ?? ''}
+        itemAuthor={portalApplyItem?._author || portalApplyItem?.company || 'admin'}
+        color="#3b82f6"
       />
     </div>
   );

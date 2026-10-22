@@ -8,8 +8,9 @@ import {
 import { useAuth } from '../AuthContext';
 import ContentManager from '../components/ContentManager';
 import { portalGetByAuthor } from '../portalData';
+import { portalAppGetByAuthor, portalAppUpdateStatus, portalAppDelete, workflowFor, statusColor } from '../portalApplications';
 
-type Tab = 'dashboard' | 'students' | 'placements' | 'companies' | 'events' | 'announcements' | 'profile' | 'settings';
+type Tab = 'dashboard' | 'students' | 'placements' | 'companies' | 'events' | 'registrations' | 'announcements' | 'profile' | 'settings';
 
 // ── Mock students ─────────────────────────────────────────────────
 const MOCK_STUDENTS = Array.from({ length: 28 }, (_, i) => ({
@@ -109,15 +110,18 @@ export default function CollegePortal() {
     setTimeout(() => setSavedMsg(''), 3000);
   };
 
+  const eventRegistrations = portalAppGetByAuthor(collegeId);
+
   const NAV: { id:Tab; label:string; icon:string; count?:number }[] = [
-    { id:'dashboard',     label:'Dashboard',        icon:'⬛' },
-    { id:'students',      label:'Students',         icon:'👥', count:filtered.length },
-    { id:'placements',    label:'Placement Report', icon:'📊' },
-    { id:'companies',     label:'Company Connect',  icon:'🏢' },
-    { id:'events',        label:'College Events',   icon:'🎪', count:myEvents },
-    { id:'announcements', label:'Announcements',    icon:'📣' },
-    { id:'profile',       label:'College Profile',  icon:'🏫' },
-    { id:'settings',      label:'Settings',         icon:'⚙️' },
+    { id:'dashboard',     label:'Dashboard',         icon:'⬛' },
+    { id:'students',      label:'Students',          icon:'👥', count:filtered.length },
+    { id:'placements',    label:'Placement Report',  icon:'📊' },
+    { id:'companies',     label:'Company Connect',   icon:'🏢' },
+    { id:'events',        label:'College Events',    icon:'🎪', count:myEvents },
+    { id:'registrations', label:'Registrations',     icon:'📋', count:eventRegistrations.filter(r=>r.status==='registered').length },
+    { id:'announcements', label:'Announcements',     icon:'📣' },
+    { id:'profile',       label:'College Profile',   icon:'🏫' },
+    { id:'settings',      label:'Settings',          icon:'⚙️' },
   ];
 
   return (
@@ -365,8 +369,67 @@ export default function CollegePortal() {
         {tab === 'events' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
             <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>College Events</h2>
-            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Events you create appear on the <strong>/events</strong> page for all students</p>
-            <ContentManager type="event" author={collegeId} accentColor="#10b981"/>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Events you create appear on the <strong>/events</strong> page for all students to register</p>
+            <ContentManager type="event" author={collegeId} accentColor="#10b981" onDataChange={() => setTab(t => t)}/>
+          </motion.div>
+        )}
+
+        {/* EVENT REGISTRATIONS */}
+        {tab === 'registrations' && (
+          <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Event Registrations</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Students who registered for your events via the /events page</p>
+            {eventRegistrations.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px', borderRadius:14, background:'var(--surface)', border:'1px dashed var(--border)' }}>
+                <div style={{ fontSize:52, marginBottom:14 }}>📭</div>
+                <h3 style={{ fontWeight:700, fontSize:18, color:'var(--text)', marginBottom:8 }}>No registrations yet</h3>
+                <p style={{ fontSize:13, color:'var(--text-3)' }}>Create events in the College Events tab — students can then register</p>
+                <button onClick={() => setTab('events')} style={{ marginTop:16, padding:'10px 20px', borderRadius:10, background:'#10b981', border:'none', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>Go to Events</button>
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {eventRegistrations.map(reg => {
+                  const sc = statusColor(reg.status);
+                  const wf = workflowFor(reg.type);
+                  return (
+                    <div key={reg.id} style={{ borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', padding:'13px 16px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+                        <div style={{ width:34, height:34, borderRadius:9, background:`${sc}14`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:sc, fontSize:14, flexShrink:0 }}>
+                          {reg.studentName[0]?.toUpperCase()}
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:700, fontSize:13.5, color:'var(--text)' }}>{reg.studentName}</div>
+                          <div style={{ fontSize:11.5, color:'var(--text-3)' }}>🎪 {reg.itemTitle} · {reg.studentEmail}</div>
+                        </div>
+                        <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:999, background:`${sc}15`, color:sc }}>
+                          {reg.status.charAt(0).toUpperCase()+reg.status.slice(1)}
+                        </span>
+                        <div style={{ display:'flex', gap:5, flexShrink:0 }}>
+                          {wf.map(w => (
+                            <button key={w.status} onClick={() => { portalAppUpdateStatus(reg.id, w.status); setTab(t => t); }}
+                              style={{ fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:999, cursor:'pointer', border:`1.5px solid ${w.color}`, background:reg.status===w.status?w.color:'transparent', color:reg.status===w.status?'#fff':w.color, transition:'all 0.15s' }}>
+                              {w.label}
+                            </button>
+                          ))}
+                          <button onClick={() => { portalAppDelete(reg.id); setTab(t => t); }}
+                            style={{ padding:'4px 8px', borderRadius:999, background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#ef4444', cursor:'pointer', fontSize:11 }}>
+                            <Trash2 size={11}/>
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:6 }}>
+                        {[['Phone',reg.studentPhone||'—'],['College',reg.studentCollege||'—'],['Branch',reg.studentBranch||'—'],['Year',reg.studentYear||'—'],['Applied',new Date(reg.appliedAt).toLocaleDateString('en-IN')]].map(([l,v]) => (
+                          <div key={l} style={{ padding:'5px 9px', borderRadius:7, background:'var(--bg)', border:'1px solid var(--border)' }}>
+                            <div style={{ fontSize:9.5, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', marginBottom:1 }}>{l}</div>
+                            <div style={{ fontSize:11.5, fontWeight:600, color:'var(--text)' }}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         )}
 

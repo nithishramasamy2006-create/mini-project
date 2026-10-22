@@ -7,6 +7,7 @@ import {
   portalGetAll, portalGetByAuthor, portalCreate, portalUpdate,
   portalDelete, portalToggleStatus,
 } from '../portalData';
+import { portalAppCountByItem } from '../portalApplications';
 
 // ── Props ─────────────────────────────────────────────────────────
 interface ContentManagerProps {
@@ -16,6 +17,7 @@ interface ContentManagerProps {
   allowedFields?: string[]; // restrict visible/editable fields
   accentColor?: string;
   readOnly?: boolean;
+  onDataChange?: () => void; // called after create/edit/delete/toggle
 }
 
 // ── Reusable form renderer ────────────────────────────────────────
@@ -134,7 +136,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Main ContentManager ────────────────────────────────────────────
 export default function ContentManager({
-  type, author, allowedFields, accentColor, readOnly = false,
+  type, author, allowedFields, accentColor, readOnly = false, onDataChange,
 }: ContentManagerProps) {
   const meta    = TYPE_META[type];
   const color   = accentColor || meta.color;
@@ -185,6 +187,7 @@ export default function ContentManager({
     }
 
     reload();
+    onDataChange?.();
     setSaving(false);
     setTimeout(() => { setMsg(''); setPanelOpen(false); }, 1200);
   };
@@ -193,11 +196,13 @@ export default function ContentManager({
     if (!confirm('Delete this item? This cannot be undone.')) return;
     portalDelete(type, id);
     reload();
+    onDataChange?.();
   };
 
   const handleToggle = (id: number) => {
     portalToggleStatus(type, id);
     reload();
+    onDataChange?.();
   };
 
   const filtered = useMemo(() => items.filter(i => {
@@ -258,6 +263,13 @@ export default function ContentManager({
                 </div>
 
                 <StatusBadge status={item.status || 'active'} />
+
+                {/* App count badge */}
+                {(() => { const cnt = portalAppCountByItem(item.id); return cnt > 0 ? (
+                  <span style={{ fontSize:10.5, fontWeight:800, padding:'3px 9px', borderRadius:999, background:'rgba(124,58,237,0.12)', color:'var(--accent)', flexShrink:0 }}>
+                    {cnt} applied
+                  </span>
+                ) : null; })()}
 
                 {/* Actions */}
                 <div style={{ display:'flex', gap:5, flexShrink:0 }}>

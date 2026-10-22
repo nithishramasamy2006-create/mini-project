@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, X, ChevronDown, Award, Star, Clock, Users, TrendingUp, MapPin, Flame, Bookmark } from 'lucide-react';
 import { PROJECTS, CATEGORIES } from '../data';
 import ApplyModal from '../components/ApplyModal';
+import PortalApplyModal from '../components/PortalApplyModal';
 import { portalGetAll } from '../portalData';
 
 const DIFFS = ['All Levels', 'Beginner', 'Intermediate', 'Advanced', 'Expert'];
@@ -65,9 +66,13 @@ export default function ProjectsPage() {
     e.stopPropagation();
     setSaved(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }, []);
-  const [applyItem, setApplyItem] = useState<typeof PROJECTS[0] | null>(null);
-  const openApply  = useCallback((p: typeof PROJECTS[0]) => setApplyItem(p), []);
-  const closeApply = useCallback(() => setApplyItem(null), []);
+  const [applyItem,       setApplyItem]       = useState<typeof PROJECTS[0] | null>(null);
+  const [portalApplyItem, setPortalApplyItem] = useState<any | null>(null);
+  const openApply  = useCallback((p: any) => {
+    if ((p as any)._portal) setPortalApplyItem(p);
+    else setApplyItem(p);
+  }, []);
+  const closeApply = useCallback(() => { setApplyItem(null); setPortalApplyItem(null); }, []);
 
   // Called by ApplyModal after success — instantly updates card
   const handleApplySuccess = useCallback((itemId: number, updatedSpots: number | null) => {
@@ -388,7 +393,7 @@ export default function ProjectsPage() {
         @media (max-width: 860px) { #proj-sidebar { display: none !important; } }
       `}</style>
 
-      {/* Always mounted — avoids re-mount flicker on open */}
+      {/* Standard backend apply modal (static projects) */}
       <ApplyModal
         open={!!applyItem}
         onClose={closeApply}
@@ -398,6 +403,19 @@ export default function ProjectsPage() {
         itemTitle={applyItem?.title ?? ''}
         itemCompany={applyItem?.company ?? ''}
         color={applyItem?.color}
+      />
+
+      {/* Portal apply modal (portal-created projects → saved to localStorage) */}
+      <PortalApplyModal
+        open={!!portalApplyItem}
+        onClose={closeApply}
+        onSuccess={() => setApplied(prev => new Set(prev).add(portalApplyItem?.id ?? 0))}
+        type="project"
+        itemId={portalApplyItem?.id ?? 0}
+        itemTitle={portalApplyItem?.title ?? ''}
+        itemCompany={portalApplyItem?.company ?? ''}
+        itemAuthor={portalApplyItem?._author || portalApplyItem?.company || 'admin'}
+        color="#7c3aed"
       />
     </div>
   );

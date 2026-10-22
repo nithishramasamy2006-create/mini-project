@@ -9,6 +9,7 @@ import { EVENTS, EVENT_TYPES, type Event, type EventType } from '../eventsData';
 import { useDebounce } from '../hooks';
 import { useNavigate } from 'react-router-dom';
 import ApplyModal from '../components/ApplyModal';
+import PortalApplyModal from '../components/PortalApplyModal';
 import { portalGetAll } from '../portalData';
 
 // Merge static + portal events
@@ -206,6 +207,7 @@ export default function EventsPage() {
   const [q,           setQ]          = useState('');
   const dQ = useDebounce(q, 180);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [portalEventItem, setPortalEventItem] = useState<Event | null>(null);
   const [savedEvents, setSavedEvents] = useState<Set<number>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('nm_saved_events') || '[]')); }
     catch { return new Set(); }
@@ -318,7 +320,7 @@ export default function EventsPage() {
                 <motion.div key={ev.id}
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.38, delay: i * 0.06 }}
-                  onClick={() => setSelectedEvent(ev)}
+                  onClick={() => (ev as any)._portal ? setPortalEventItem(ev) : setSelectedEvent(ev)}
                   style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${ev.color}30`, background: `linear-gradient(135deg, ${ev.color}12, var(--surface) 60%)`, transition: 'transform 0.2s, box-shadow 0.2s' }}
                   whileHover={{ y: -4, boxShadow: `0 12px 40px ${ev.color}30` }}>
                   {/* Top banner */}
@@ -562,6 +564,19 @@ export default function EventsPage() {
           <RegisterModal event={selectedEvent} onClose={() => { setSelectedEvent(null); setRegistered(new Set(JSON.parse(localStorage.getItem('nm_registered_events') || '[]'))); }} />
         )}
       </AnimatePresence>
+
+      {/* Portal event registration → saves to localStorage pipeline */}
+      <PortalApplyModal
+        open={!!portalEventItem}
+        onClose={() => setPortalEventItem(null)}
+        onSuccess={() => setRegistered(prev => new Set(prev).add(portalEventItem?.id ?? 0))}
+        type="event"
+        itemId={portalEventItem?.id ?? 0}
+        itemTitle={portalEventItem?.title ?? ''}
+        itemCompany={portalEventItem?.organizer ?? ''}
+        itemAuthor={(portalEventItem as any)?._author || portalEventItem?.organizer || 'admin'}
+        color="#f59e0b"
+      />
 
       <style>{`
         @media (max-width: 640px) {

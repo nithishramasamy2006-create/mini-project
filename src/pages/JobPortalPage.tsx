@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../AuthContext';
 import { BASE } from '../api';
 import { portalGetAll } from '../portalData';
+import PortalApplyModal from '../components/PortalApplyModal';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -779,6 +780,7 @@ export default function JobPortalPage() {
   const [appliedIds, setAppliedIds] = useState<Set<number>>(new Set());
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [applyJob, setApplyJob] = useState<Job | null>(null);
+  const [portalApplyJob, setPortalApplyJob] = useState<Job | null>(null);
   const [tab, setTab] = useState<'jobs' | 'saved' | 'applications'>('jobs');
   const [showFilters, setShowFilters] = useState(false);
   const [alertEmail, setAlertEmail] = useState('');
@@ -1008,14 +1010,17 @@ export default function JobPortalPage() {
               onClick={() => setActiveJob(null)}
               style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 999 }} />
             <JobDrawer job={activeJob} onClose={() => setActiveJob(null)}
-              onApply={() => { setApplyJob(activeJob); setActiveJob(null); }}
+              onApply={() => {
+                if ((activeJob as any)._portal) { setPortalApplyJob(activeJob); setActiveJob(null); }
+                else { setApplyJob(activeJob); setActiveJob(null); }
+              }}
               saved={savedIds.has(activeJob.id)} onToggleSave={() => toggleSave(activeJob.id)}
               hasApplied={appliedIds.has(activeJob.id)} />
           </>
         )}
       </AnimatePresence>
 
-      {/* ── APPLY MODAL ── */}
+      {/* Standard job apply modal */}
       <AnimatePresence>
         {applyJob && (
           <ApplyModal job={applyJob} onClose={() => setApplyJob(null)}
@@ -1023,6 +1028,19 @@ export default function JobPortalPage() {
             token={token} user={user} />
         )}
       </AnimatePresence>
+
+      {/* Portal job apply modal → saves to localStorage */}
+      <PortalApplyModal
+        open={!!portalApplyJob}
+        onClose={() => setPortalApplyJob(null)}
+        onSuccess={() => setAppliedIds(prev => new Set([...prev, portalApplyJob?.id ?? 0]))}
+        type="job"
+        itemId={portalApplyJob?.id ?? 0}
+        itemTitle={portalApplyJob?.title ?? ''}
+        itemCompany={portalApplyJob?.company ?? ''}
+        itemAuthor={(portalApplyJob as any)?._author || portalApplyJob?.company || 'admin'}
+        color="#10b981"
+      />
     </div>
   );
 }
