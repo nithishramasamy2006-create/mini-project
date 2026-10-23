@@ -1,0 +1,77 @@
+﻿import { useState, useMemo, useCallback } from "react";
+import { useDebounce } from "../hooks";
+import { motion } from "framer-motion";
+import { Search, MapPin, Clock, Users, Bookmark, Star, ChevronDown } from "lucide-react";
+import { INTERNSHIPS, CATEGORIES } from "../data";
+import ApplyModal from "../components/ApplyModal";
+import PortalApplyModal from "../components/PortalApplyModal";
+import { portalGetAll } from "../portalData";
+
+const TYPES = ["All Types", "Paid", "Certificate"];
+
+const safeColor = (c) =>
+  typeof c === "string" && c.length > 0 ? c : "#7c3aed";
+
+const safeLogo = (item) =>
+  item?.logo || item?.companyLogo || "🏢";
+
+function getAllInternships() {
+  const portal = portalGetAll("internship")
+    .filter((i) => i.status === "active")
+    .map((i, idx) => ({
+      id:          80000 + idx,
+      title:       i.title       || "Untitled Internship",
+      company:     i.company     || i._author || "Company",
+      logo:        i.logo        || "🏢",
+      category:    i.category    || "fullstack",
+      type:        i.type        || "Paid",
+      duration:    i.duration    || "Flexible",
+      stipend:     i.stipend     || "Negotiable",
+      location:    i.location    || "Remote",
+      openings:    parseInt(i.openings) || 2,
+      skills:      Array.isArray(i.skills)
+                     ? i.skills
+                     : typeof i.skills === "string"
+                       ? i.skills.split(",").map((s) => s.trim())
+                       : [],
+      description: i.description || "",
+      deadline:    i.deadline    || "",
+      color:       safeColor(i.color),
+      ppo:         !!i.ppo,
+      featured:    !!i.featured,
+      rating:      4.5,
+      _portal:     true,
+    }));
+  return [...INTERNSHIPS, ...portal];
+}
+
+export default function InternshipsPage() {
+  const [q,    setQ]    = useState("");
+  const dQ              = useDebounce(q, 180);
+  const [cat,  setCat]  = useState("all");
+  const [type, setType] = useState("All Types");
+
+  const [applyItem,       setApplyItem]       = useState(null);
+  const [portalApplyItem, setPortalApplyItem] = useState(null);
+
+  const openApply  = useCallback((i) => {
+    if (i._portal) setPortalApplyItem(i);
+    else           setApplyItem(i);
+  }, []);
+  const closeApply = useCallback(() => {
+    setApplyItem(null);
+    setPortalApplyItem(null);
+  }, []);
+
+  const filtered = useMemo(() =>
+    getAllInternships().filter(i => {
+      const q2 = dQ.toLowerCase();
+      if (q2 && !i.title.toLowerCase().includes(q2) && !(i.company || "").toLowerCase().includes(q2)) return false;
+      if (cat  !== "all"       && i.category !== cat)  return false;
+      if (type !== "All Types" && i.type !== type)     return false;
+      return true;
+    }),
+  [dQ, cat, type]);
+
+  return null; // placeholder
+}

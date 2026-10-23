@@ -23,11 +23,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Split vendor chunks for better caching
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'router':       ['react-router-dom'],
-          'motion':       ['framer-motion'],
-          'icons':        ['lucide-react'],
+        manualChunks: (id) => {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react-vendor';
+          if (id.includes('node_modules/react-router-dom') || id.includes('node_modules/react-router/')) return 'router';
+          if (id.includes('node_modules/framer-motion')) return 'motion';
+          if (id.includes('node_modules/lucide-react')) return 'icons';
         },
       },
     },

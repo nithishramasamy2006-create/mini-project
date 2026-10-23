@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, MapPin, Clock, Briefcase, DollarSign, Bookmark,
@@ -13,9 +14,9 @@ import { BASE } from '../api';
 import { portalGetAll } from '../portalData';
 import PortalApplyModal from '../components/PortalApplyModal';
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Types
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Job {
   id: number; title: string; company: string; logo: string; color: string;
   location: string; type: 'Full-time' | 'Part-time' | 'Remote' | 'Hybrid' | 'Contract';
@@ -32,13 +33,13 @@ interface ApplicationRecord {
   createdAt: string; resumeLink: string; coverLetter: string;
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Static Job Data
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const JOBS: Job[] = [
   {
-    id: 101, title: 'Software Engineer – Full Stack', company: 'Zoho Corp', logo: '🟧', color: '#e42527',
-    location: 'Chennai, TN', type: 'Full-time', experience: '0–2 yrs', salary: '₹6–10 LPA',
+    id: 101, title: 'Software Engineer â€“ Full Stack', company: 'Zoho Corp', logo: 'ðŸŸ§', color: '#e42527',
+    location: 'Chennai, TN', type: 'Full-time', experience: '0â€“2 yrs', salary: 'â‚¹6â€“10 LPA',
     posted: '2h ago', deadline: 'Dec 15, 2026', category: 'Engineering',
     skills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL'],
     description: "Join Zoho's product engineering team building world-class SaaS products used by 80M+ users. Design, develop and ship features end-to-end in an agile environment with passionate engineers.",
@@ -47,8 +48,8 @@ const JOBS: Job[] = [
     openings: 12, applicants: 347, views: 1820, featured: true, urgent: false, verified: true, rating: 4.6, employees: '15,000+', industry: 'SaaS'
   },
   {
-    id: 102, title: 'Data Scientist', company: 'Freshworks', logo: '🌀', color: '#29b5e8',
-    location: 'Chennai / Remote', type: 'Hybrid', experience: '1–3 yrs', salary: '₹10–18 LPA',
+    id: 102, title: 'Data Scientist', company: 'Freshworks', logo: 'ðŸŒ€', color: '#29b5e8',
+    location: 'Chennai / Remote', type: 'Hybrid', experience: '1â€“3 yrs', salary: 'â‚¹10â€“18 LPA',
     posted: '5h ago', deadline: 'Nov 30, 2026', category: 'Data & AI',
     skills: ['Python', 'ML', 'Spark', 'SQL', 'TensorFlow'],
     description: "Work on ML models that power Freshworks AI features across CRM, helpdesk and sales products. Own the full ML lifecycle from data exploration to production deployment.",
@@ -57,8 +58,8 @@ const JOBS: Job[] = [
     openings: 5, applicants: 219, views: 980, featured: true, urgent: true, verified: true, rating: 4.5, employees: '5,000+', industry: 'SaaS'
   },
   {
-    id: 103, title: 'UI/UX Designer', company: 'Razorpay', logo: '⚡', color: '#3395ff',
-    location: 'Bangalore / Remote', type: 'Remote', experience: '1–4 yrs', salary: '₹8–15 LPA',
+    id: 103, title: 'UI/UX Designer', company: 'Razorpay', logo: 'âš¡', color: '#3395ff',
+    location: 'Bangalore / Remote', type: 'Remote', experience: '1â€“4 yrs', salary: 'â‚¹8â€“15 LPA',
     posted: '1d ago', deadline: 'Dec 1, 2026', category: 'Design',
     skills: ['Figma', 'Prototyping', 'Design Systems', 'User Research'],
     description: "Design intuitive payment experiences for 8M+ businesses. Own end-to-end design for our dashboard, checkout SDK and developer tools.",
@@ -67,8 +68,8 @@ const JOBS: Job[] = [
     openings: 3, applicants: 178, views: 720, featured: false, urgent: false, verified: true, rating: 4.4, employees: '3,500+', industry: 'FinTech'
   },
   {
-    id: 104, title: 'DevOps Engineer', company: 'TCS', logo: '🔵', color: '#1a56db',
-    location: 'Chennai, TN', type: 'Full-time', experience: '2–5 yrs', salary: '₹7–12 LPA',
+    id: 104, title: 'DevOps Engineer', company: 'TCS', logo: 'ðŸ”µ', color: '#1a56db',
+    location: 'Chennai, TN', type: 'Full-time', experience: '2â€“5 yrs', salary: 'â‚¹7â€“12 LPA',
     posted: '2d ago', deadline: 'Jan 10, 2027', category: 'Engineering',
     skills: ['AWS', 'Kubernetes', 'Terraform', 'CI/CD', 'Docker'],
     description: "Join TCS Digital Centre of Excellence to build world-class DevOps pipelines for Fortune 500 clients. Lead cloud migration and infrastructure automation projects.",
@@ -77,8 +78,8 @@ const JOBS: Job[] = [
     openings: 25, applicants: 562, views: 2200, featured: false, urgent: true, verified: true, rating: 4.2, employees: '600,000+', industry: 'IT Services'
   },
   {
-    id: 105, title: 'Product Manager', company: 'CRED', logo: '⚫', color: '#d4af37',
-    location: 'Bangalore', type: 'Full-time', experience: '3–6 yrs', salary: '₹20–35 LPA',
+    id: 105, title: 'Product Manager', company: 'CRED', logo: 'âš«', color: '#d4af37',
+    location: 'Bangalore', type: 'Full-time', experience: '3â€“6 yrs', salary: 'â‚¹20â€“35 LPA',
     posted: '3d ago', deadline: 'Nov 25, 2026', category: 'Product',
     skills: ['Product Strategy', 'SQL', 'User Research', 'Roadmapping', 'Jira'],
     description: "Own product strategy for CRED's rewards platform used by 12M+ creditworthy members. Drive 0-to-1 features with cross-functional teams.",
@@ -87,8 +88,8 @@ const JOBS: Job[] = [
     openings: 2, applicants: 489, views: 3100, featured: true, urgent: false, verified: true, rating: 4.7, employees: '1,500+', industry: 'FinTech'
   },
   {
-    id: 106, title: 'Backend Engineer – Go', company: 'Swiggy', logo: '🟠', color: '#fc8019',
-    location: 'Bangalore / Hybrid', type: 'Hybrid', experience: '2–5 yrs', salary: '₹15–28 LPA',
+    id: 106, title: 'Backend Engineer â€“ Go', company: 'Swiggy', logo: 'ðŸŸ ', color: '#fc8019',
+    location: 'Bangalore / Hybrid', type: 'Hybrid', experience: '2â€“5 yrs', salary: 'â‚¹15â€“28 LPA',
     posted: '4d ago', deadline: 'Dec 20, 2026', category: 'Engineering',
     skills: ['Go', 'gRPC', 'Kafka', 'Redis', 'MySQL'],
     description: "Build backend systems powering 3M+ daily orders at Swiggy. Join Platform Engineering working on distributed systems at India-scale.",
@@ -97,8 +98,8 @@ const JOBS: Job[] = [
     openings: 8, applicants: 302, views: 1540, featured: false, urgent: false, verified: true, rating: 4.3, employees: '7,000+', industry: 'FoodTech'
   },
   {
-    id: 107, title: 'Android Developer', company: 'PhonePe', logo: '💜', color: '#5f259f',
-    location: 'Bangalore', type: 'Full-time', experience: '1–3 yrs', salary: '₹10–20 LPA',
+    id: 107, title: 'Android Developer', company: 'PhonePe', logo: 'ðŸ’œ', color: '#5f259f',
+    location: 'Bangalore', type: 'Full-time', experience: '1â€“3 yrs', salary: 'â‚¹10â€“20 LPA',
     posted: '5d ago', deadline: 'Dec 5, 2026', category: 'Mobile',
     skills: ['Kotlin', 'Android SDK', 'Jetpack Compose', 'MVVM', 'REST APIs'],
     description: "Build features for India's #1 UPI app used by 500M users. Work on performance, reliability and delightful payment experiences.",
@@ -107,8 +108,8 @@ const JOBS: Job[] = [
     openings: 10, applicants: 415, views: 1890, featured: true, urgent: true, verified: true, rating: 4.5, employees: '4,000+', industry: 'FinTech'
   },
   {
-    id: 108, title: 'Cloud Solutions Architect', company: 'Infosys', logo: '🔷', color: '#007cc3',
-    location: 'Hyderabad / Remote', type: 'Hybrid', experience: '5–8 yrs', salary: '₹18–30 LPA',
+    id: 108, title: 'Cloud Solutions Architect', company: 'Infosys', logo: 'ðŸ”·', color: '#007cc3',
+    location: 'Hyderabad / Remote', type: 'Hybrid', experience: '5â€“8 yrs', salary: 'â‚¹18â€“30 LPA',
     posted: '1w ago', deadline: 'Jan 15, 2027', category: 'Cloud',
     skills: ['AWS', 'Azure', 'GCP', 'Microservices', 'Security'],
     description: "Lead cloud transformation for global enterprise clients across banking, retail and healthcare sectors.",
@@ -117,8 +118,8 @@ const JOBS: Job[] = [
     openings: 15, applicants: 234, views: 890, featured: false, urgent: false, verified: true, rating: 4.1, employees: '350,000+', industry: 'IT Consulting'
   },
   {
-    id: 109, title: 'Cybersecurity Analyst', company: 'HCL Tech', logo: '🔹', color: '#00539b',
-    location: 'Chennai, TN', type: 'Full-time', experience: '1–4 yrs', salary: '₹6–14 LPA',
+    id: 109, title: 'Cybersecurity Analyst', company: 'HCL Tech', logo: 'ðŸ”¹', color: '#00539b',
+    location: 'Chennai, TN', type: 'Full-time', experience: '1â€“4 yrs', salary: 'â‚¹6â€“14 LPA',
     posted: '1w ago', deadline: 'Dec 28, 2026', category: 'Security',
     skills: ['SIEM', 'Penetration Testing', 'Network Security', 'Python', 'Splunk'],
     description: "Protect HCL and client systems. Work in our 24x7 SOC conducting penetration testing, vulnerability assessments and incident response.",
@@ -127,8 +128,8 @@ const JOBS: Job[] = [
     openings: 20, applicants: 187, views: 760, featured: false, urgent: true, verified: true, rating: 4.2, employees: '225,000+', industry: 'Technology'
   },
   {
-    id: 110, title: 'ML Engineer – NLP', company: 'Meesho', logo: '🟣', color: '#9c27b0',
-    location: 'Bangalore / Remote', type: 'Remote', experience: '2–5 yrs', salary: '₹18–32 LPA',
+    id: 110, title: 'ML Engineer â€“ NLP', company: 'Meesho', logo: 'ðŸŸ£', color: '#9c27b0',
+    location: 'Bangalore / Remote', type: 'Remote', experience: '2â€“5 yrs', salary: 'â‚¹18â€“32 LPA',
     posted: '2w ago', deadline: 'Nov 28, 2026', category: 'Data & AI',
     skills: ['Python', 'HuggingFace', 'LLMs', 'PyTorch', 'MLflow'],
     description: "Build NLP systems powering product discovery and search for 150M+ users. Work with LLMs, fine-tuning and multilingual models.",
@@ -137,8 +138,8 @@ const JOBS: Job[] = [
     openings: 4, applicants: 298, views: 1230, featured: true, urgent: false, verified: true, rating: 4.4, employees: '3,000+', industry: 'E-Commerce'
   },
   {
-    id: 111, title: 'QA Automation Engineer', company: 'Wipro', logo: '🟤', color: '#341c6c',
-    location: 'Pune', type: 'Full-time', experience: '1–3 yrs', salary: '₹5–9 LPA',
+    id: 111, title: 'QA Automation Engineer', company: 'Wipro', logo: 'ðŸŸ¤', color: '#341c6c',
+    location: 'Pune', type: 'Full-time', experience: '1â€“3 yrs', salary: 'â‚¹5â€“9 LPA',
     posted: '3d ago', deadline: 'Jan 5, 2027', category: 'Engineering',
     skills: ['Selenium', 'Cypress', 'Java', 'TestNG', 'API Testing'],
     description: "Build robust automation test suites for Wipro's banking and insurance clients. Agile team with daily CI/CD runs.",
@@ -147,34 +148,72 @@ const JOBS: Job[] = [
     openings: 30, applicants: 421, views: 1670, featured: false, urgent: false, verified: true, rating: 4.0, employees: '250,000+', industry: 'IT Services'
   },
   {
-    id: 112, title: 'iOS Developer', company: 'OLA', logo: '🟢', color: '#1ab394',
-    location: 'Bangalore / Hybrid', type: 'Hybrid', experience: '2–4 yrs', salary: '₹12–22 LPA',
+    id: 112, title: 'iOS Developer', company: 'OLA', logo: 'ðŸŸ¢', color: '#1ab394',
+    location: 'Bangalore / Hybrid', type: 'Hybrid', experience: '2â€“4 yrs', salary: 'â‚¹12â€“22 LPA',
     posted: '6d ago', deadline: 'Dec 10, 2026', category: 'Mobile',
     skills: ['Swift', 'SwiftUI', 'Core Data', 'MapKit', 'REST APIs'],
-    description: "Build OLA driver and rider apps in Swift/SwiftUI for 150M users across 100+ cities. Solve real-time mapping, ride-matching and payment challenges at scale.",
+    description: "Build OLA driver and rider apps in Swift/SwiftUI for 150M users across 100+ cities.",
     responsibilities: ['Build new SwiftUI features for rider app', 'Optimize map rendering performance', 'Integrate third-party SDKs (Maps, Payments)', 'Conduct code reviews', 'Write UI tests with XCTest'],
     perks: ['Cab Credits', 'ESOPs', 'Health Cover', 'Mac & iPhone for work', 'Team Retreats'],
     openings: 6, applicants: 253, views: 1020, featured: false, urgent: false, verified: true, rating: 4.1, employees: '5,000+', industry: 'Mobility'
   },
+  { id:113, title:'Machine Learning Engineer', company:'Sarvam AI', logo:'ðŸ¤–', color:'#7c3aed', location:'Bangalore (On-site)', type:'Full-time', experience:'1â€“3 yrs', salary:'â‚¹18â€“30 LPA', posted:'1d ago', deadline:'Jan 5, 2027', category:'Data & AI', skills:['Python','PyTorch','HuggingFace','CUDA','MLOps'], description:'Build state-of-the-art Indic language models for Tamil, Telugu, Hindi speech and text at Sarvam AI â€” one of India\'s leading AI startups.', responsibilities:['Train and fine-tune LLMs on Indic data','Optimize inference speed for production','Build data pipelines for 100+ language datasets','Collaborate with research team on novel architectures','Deploy models via FastAPI + Docker'], perks:['ESOP','Unlimited PTO','Research Budget','GPU Cluster Access','Conference Sponsorship'], openings:4, applicants:412, views:2100, featured:true, urgent:true, verified:true, rating:4.8, employees:'100â€“500', industry:'AI' },
+  { id:114, title:'Platform Engineer â€“ Cloud Infrastructure', company:'Zepto', logo:'âš¡', color:'#7c3aed', location:'Mumbai (On-site)', type:'Full-time', experience:'2â€“5 yrs', salary:'â‚¹20â€“35 LPA', posted:'3h ago', deadline:'Jan 20, 2027', category:'Cloud', skills:['Kubernetes','Terraform','AWS','Go','Prometheus'], description:'Build and scale cloud platform powering 10-minute grocery delivery for 5M+ customers across 25 Indian cities.', responsibilities:['Design Kubernetes-native platforms','Build internal developer tools','Implement FinOps cost optimization','24/7 on-call rotation','Mentor junior engineers'], perks:['ESOPs','Health Cover','Meal Credits','WFH Flexibility','L&D Budget'], openings:5, applicants:289, views:1450, featured:true, urgent:false, verified:true, rating:4.4, employees:'2,000+', industry:'Quick Commerce' },
+  { id:115, title:'Security Engineer', company:'Cred', logo:'ðŸ’œ', color:'#7c3aed', location:'Bangalore (Hybrid)', type:'Hybrid', experience:'2â€“5 yrs', salary:'â‚¹18â€“32 LPA', posted:'2d ago', deadline:'Dec 20, 2026', category:'Security', skills:['AppSec','Pentest','AWS Security','Python','OWASP'], description:'Protect Cred\'s platform handling â‚¹1L Cr+ in credit card payments by building security infrastructure and running red team exercises.', responsibilities:['Conduct penetration testing','Build SAST/DAST pipelines','Threat model new features','Run security training','Manage bug bounty program'], perks:['Top-tier Health Insurance','ESOPs','Unlimited Leaves','Premium Office','Annual Retreat'], openings:3, applicants:198, views:980, featured:false, urgent:false, verified:true, rating:4.6, employees:'1,000+', industry:'FinTech' },
+  { id:116, title:'Android Developer', company:'Meesho', logo:'ðŸ›ï¸', color:'#f43f5e', location:'Bangalore (Hybrid)', type:'Hybrid', experience:'1â€“4 yrs', salary:'â‚¹12â€“24 LPA', posted:'4d ago', deadline:'Jan 15, 2027', category:'Mobile', skills:['Kotlin','Jetpack Compose','Coroutines','Retrofit','Room'], description:'Build shopping features for 140M+ Meesho users â€” India\'s largest social commerce platform serving tier 2 and 3 cities.', responsibilities:['Ship new Kotlin features','Optimize app startup time','Implement offline-first patterns','Write unit and UI tests','Conduct code reviews'], perks:['ESOPs','Remote Friendly','Health Cover','Learning Budget','Free Lunch'], openings:8, applicants:341, views:1680, featured:false, urgent:false, verified:true, rating:4.3, employees:'5,000+', industry:'E-Commerce' },
+  { id:117, title:'Data Scientist â€“ Pricing', company:'IndiGo Airlines', logo:'âœˆï¸', color:'#3b82f6', location:'Gurgaon (Hybrid)', type:'Hybrid', experience:'2â€“5 yrs', salary:'â‚¹16â€“28 LPA', posted:'1d ago', deadline:'Jan 10, 2027', category:'Data & AI', skills:['Python','Revenue Management','SQL','XGBoost','Tableau'], description:'Build dynamic pricing models that optimise seat revenue across 1,800+ daily IndiGo flights using demand forecasting and competitor analysis.', responsibilities:['Build fare optimization ML models','Analyze booking and yield data','A/B test pricing strategies','Present insights to revenue management team','Monitor model performance in production'], perks:['Discounted Flights','Health Cover','Flexible Hours','Annual Bonus','Cafeteria'], openings:3, applicants:176, views:890, featured:false, urgent:false, verified:true, rating:4.2, employees:'30,000+', industry:'Aviation' },
+  { id:118, title:'Full Stack Engineer â€“ Platform', company:'Chargebee', logo:'ðŸ’¼', color:'#7c3aed', location:'Chennai (Remote)', type:'Remote', experience:'2â€“5 yrs', salary:'â‚¹18â€“30 LPA', posted:'5d ago', deadline:'Jan 25, 2027', category:'Engineering', skills:['React','Node.js','PostgreSQL','Kafka','TypeScript'], description:'Build subscription billing platform used by 6,500+ SaaS companies globally from the Chennai engineering hub.', responsibilities:['Develop billing and subscription features','Build high-availability payment APIs','Optimize database queries','Write integration tests','Contribute to platform architecture'], perks:['100% Remote','ESOPs','Home Office Budget','Health Cover','International Conference Tickets'], openings:6, applicants:267, views:1320, featured:false, urgent:false, verified:true, rating:4.5, employees:'1,000+', industry:'SaaS' },
+  { id:119, title:'ML Infrastructure Engineer', company:'PhonePe', logo:'ðŸ’™', color:'#5522cc', location:'Bangalore (On-site)', type:'Full-time', experience:'3â€“6 yrs', salary:'â‚¹25â€“45 LPA', posted:'6h ago', deadline:'Feb 1, 2027', category:'Data & AI', skills:['Kubeflow','Spark','Python','MLflow','Airflow'], description:'Build the ML platform powering fraud detection, risk scoring and recommendation systems for 500M+ PhonePe users.', responsibilities:['Design ML feature store','Build model serving infrastructure','Optimize training pipelines','Implement experiment tracking','Mentor data scientists on MLOps'], perks:['ESOPs','Performance Bonus','Health Cover','Meal Card','Learning Stipend'], openings:4, applicants:388, views:1920, featured:true, urgent:false, verified:true, rating:4.6, employees:'5,000+', industry:'FinTech' },
+  { id:120, title:'React Native Engineer', company:'CRED', logo:'ðŸ’œ', color:'#7c3aed', location:'Bangalore (On-site)', type:'Full-time', experience:'2â€“5 yrs', salary:'â‚¹20â€“38 LPA', posted:'2d ago', deadline:'Dec 28, 2026', category:'Mobile', skills:['React Native','TypeScript','Reanimated','Native Modules','Performance'], description:'Build premium mobile experiences for CRED\'s 12M+ creditworthy members using cutting-edge React Native animations and design.', responsibilities:['Build delightful animations with Reanimated 3','Optimize JS bridge performance','Write native modules in Swift/Kotlin','Implement design system components','Own feature development end-to-end'], perks:['Premium Health Cover','ESOP','Annual Bonus','Gadget Budget','Team Trips'], openings:4, applicants:312, views:1560, featured:true, urgent:false, verified:true, rating:4.7, employees:'1,000+', industry:'FinTech' },
+  { id:121, title:'DevOps Engineer', company:'Freshworks', logo:'ðŸŒ€', color:'#29b5e8', location:'Chennai (Remote)', type:'Remote', experience:'2â€“4 yrs', salary:'â‚¹14â€“24 LPA', posted:'3d ago', deadline:'Jan 18, 2027', category:'Cloud', skills:['Kubernetes','Terraform','Jenkins','AWS','Ansible'], description:'Maintain DevOps infrastructure supporting 60,000+ businesses using Freshworks CRM, helpdesk and IT products.', responsibilities:['Manage CI/CD pipelines','Provision infrastructure with Terraform','Monitor system health with Datadog','Automate deployments with Ansible','Reduce MTTR through runbook improvements'], perks:['Remote First','Health Cover','ESOPs','Learning Credits','Conference Tickets'], openings:7, applicants:234, views:1180, featured:false, urgent:false, verified:true, rating:4.5, employees:'5,000+', industry:'SaaS' },
+  { id:122, title:'Product Manager â€“ Growth', company:'Swiggy', logo:'ðŸ§¡', color:'#fc8019', location:'Bangalore (On-site)', type:'Full-time', experience:'3â€“6 yrs', salary:'â‚¹30â€“50 LPA', posted:'1d ago', deadline:'Jan 22, 2027', category:'Product', skills:['Product Strategy','SQL','A/B Testing','User Research','Roadmapping'], description:'Lead growth product initiatives for Swiggy\'s 90M+ user base â€” owning key funnels from discovery to order completion.', responsibilities:['Define and own growth KPIs','Run A/B experiments at scale','Work with data science on ML-driven personalisation','Lead cross-functional teams','Present growth reviews to leadership'], perks:['ESOPs','Swiggy Credits','Health Cover','Annual Bonus','Flexible Hours'], openings:2, applicants:521, views:2640, featured:true, urgent:false, verified:true, rating:4.5, employees:'5,000+', industry:'FoodTech' },
+  { id:123, title:'Backend Engineer â€“ Payments', company:'Juspay', logo:'ðŸ’³', color:'#7c3aed', location:'Bangalore (On-site)', type:'Full-time', experience:'1â€“3 yrs', salary:'â‚¹12â€“22 LPA', posted:'4d ago', deadline:'Dec 30, 2026', category:'Engineering', skills:['Haskell','Java','PostgreSQL','Redis','Kafka'], description:'Build ultra-low-latency payment orchestration systems at Juspay â€” processing 50M+ daily transactions for NPCI, Amazon and Jio.', responsibilities:['Build payment routing and reconciliation systems','Optimize critical path latency','Implement idempotency and retry logic','Write property-based tests','Participate in production on-call'], perks:['Health Cover','ESOPs','Flexible Hours','Meal Card','Annual Bonus'], openings:5, applicants:278, views:1390, featured:false, urgent:true, verified:true, rating:4.4, employees:'500â€“1,000', industry:'FinTech' },
+  { id:124, title:'Embedded Software Engineer', company:'Ather Energy', logo:'âš¡', color:'#10b981', location:'Bangalore (On-site)', type:'Full-time', experience:'1â€“3 yrs', salary:'â‚¹10â€“18 LPA', posted:'5d ago', deadline:'Jan 8, 2027', category:'Engineering', skills:['C','RTOS','CAN Bus','Python','OBD2'], description:'Develop firmware for Ather 450X and 450 Apex electric scooters â€” powering connected vehicle features for 500,000+ Ather owners.', responsibilities:['Implement RTOS features in C','Develop OTA update framework','Write CAN stack modules','Debug hardware-software issues','Write test coverage for critical paths'], perks:['EV Test Rides','ESOPs','Health Cover','Meal Card','Learning Budget'], openings:6, applicants:189, views:945, featured:false, urgent:false, verified:true, rating:4.3, employees:'2,000+', industry:'EV' },
+  { id:125, title:'Site Reliability Engineer', company:'Google India', logo:'ðŸ”´', color:'#ea4335', location:'Hyderabad (On-site)', type:'Full-time', experience:'2â€“5 yrs', salary:'â‚¹40â€“80 LPA', posted:'1d ago', deadline:'Jan 30, 2027', category:'Cloud', skills:['Go','Python','Kubernetes','SLOs','Distributed Systems'], description:'Ensure reliability of Google Cloud products used by millions globally from the Hyderabad SRE team.', responsibilities:['Own SLOs and error budgets','Automate toil with Go/Python','Design for failure and chaos engineering','Incident management and post-mortems','Mentor junior engineers'], perks:['World-class Benefits','RSUs','Gym & Wellness','Catered Meals','Education Budget'], openings:3, applicants:728, views:3640, featured:true, urgent:false, verified:true, rating:4.9, employees:'100,000+', industry:'Technology' },
+  { id:126, title:'NLP Research Scientist', company:'AI4Bharat (IIT Madras)', logo:'ðŸŽ“', color:'#7c3aed', location:'Chennai (Hybrid)', type:'Full-time', experience:'0â€“2 yrs', salary:'â‚¹12â€“22 LPA', posted:'2d ago', deadline:'Jan 15, 2027', category:'Data & AI', skills:['PyTorch','Transformers','Indic NLP','Research Writing','Python'], description:'Conduct cutting-edge research on Indic language models for Tamil, Hindi, Telugu and 20+ Indian languages at IIT Madras.', responsibilities:['Train multilingual language models','Publish at top AI conferences (ACL, EMNLP)','Build benchmark datasets for Indic languages','Collaborate with NPCI and govt partners','Mentor PhD students'], perks:['Research Stipend','Conference Funding','GPU Access','Campus Accommodation','Academic Collaboration'], openings:5, applicants:312, views:1560, featured:true, urgent:false, verified:true, rating:4.8, employees:'100â€“500', industry:'Research' },
+  { id:127, title:'UX Researcher', company:'Microsoft India', logo:'ðŸªŸ', color:'#0078d4', location:'Hyderabad (Hybrid)', type:'Hybrid', experience:'2â€“5 yrs', salary:'â‚¹18â€“32 LPA', posted:'3d ago', deadline:'Jan 12, 2027', category:'Design', skills:['User Research','Usability Testing','Survey Design','Figma','Data Analysis'], description:'Conduct user research for Microsoft 365 and Azure products used by 1B+ users worldwide from the Hyderabad product studio.', responsibilities:['Plan and execute generative and evaluative studies','Conduct usability testing','Synthesize insights for product teams','Advocate for accessibility','Collaborate with global research teams'], perks:['RSUs','Comprehensive Health Cover','Annual Bonus','Gym Subsidy','Education Reimbursement'], openings:3, applicants:287, views:1435, featured:false, urgent:false, verified:true, rating:4.7, employees:'50,000+', industry:'Technology' },
+  { id:128, title:'Blockchain Engineer', company:'Polygon Labs India', logo:'ðŸ”·', color:'#8247e5', location:'Bangalore (Remote)', type:'Remote', experience:'2â€“4 yrs', salary:'â‚¹20â€“38 LPA', posted:'2d ago', deadline:'Jan 5, 2027', category:'Engineering', skills:['Solidity','Rust','EVM','ZK Proofs','TypeScript'], description:'Build the next generation of Polygon\'s zkEVM, PoS and CDK infrastructure scaling Ethereum for 1B+ users.', responsibilities:['Develop and audit Solidity smart contracts','Implement ZK proof systems','Build bridging and cross-chain protocols','Review community protocol proposals','Write technical documentation'], perks:['Crypto Compensation Option','Remote First','Conference Sponsorship','Hackathon Budget','Learning Stipend'], openings:4, applicants:356, views:1780, featured:false, urgent:false, verified:true, rating:4.6, employees:'500â€“1,000', industry:'Web3' },
+  { id:129, title:'Software Engineer â€“ Observability', company:'Flipkart', logo:'ðŸ›’', color:'#f59e0b', location:'Bangalore (On-site)', type:'Full-time', experience:'2â€“5 yrs', salary:'â‚¹20â€“38 LPA', posted:'4d ago', deadline:'Dec 25, 2026', category:'Engineering', skills:['Golang','Prometheus','Grafana','OpenTelemetry','Kafka'], description:'Build observability infrastructure collecting 10TB+ of metrics and logs per day across Flipkart\'s e-commerce platform.', responsibilities:['Build telemetry collection pipelines','Design metric aggregation systems','Implement distributed tracing','Create self-service dashboarding tools','Improve alerting fidelity'], perks:['ESOPs','Health Cover','Free Meals','Learning Budget','Annual Bonus'], openings:5, applicants:298, views:1490, featured:false, urgent:false, verified:true, rating:4.4, employees:'30,000+', industry:'E-Commerce' },
+  { id:130, title:'Computer Vision Engineer', company:'ideaForge Technology', logo:'ðŸš', color:'#06b6d4', location:'Mumbai (On-site)', type:'Full-time', experience:'1â€“3 yrs', salary:'â‚¹10â€“20 LPA', posted:'3d ago', deadline:'Jan 20, 2027', category:'Data & AI', skills:['Python','OpenCV','YOLO','TensorFlow','C++'], description:'Build computer vision systems for indigenous defence and civilian UAVs â€” detect objects, track targets and enable autonomous navigation.', responsibilities:['Develop real-time object detection for drones','Optimize models for edge deployment','Integrate CV pipelines with flight controller','Test systems in field conditions','Document algorithms for DRDO review'], perks:['Health Cover','ESOPs','Meal Card','Annual Bonus','Patriotic Mission'], openings:4, applicants:156, views:780, featured:false, urgent:false, verified:true, rating:4.3, employees:'500â€“1,000', industry:'Defence Tech' },
+  { id:131, title:'Product Designer â€“ Consumer Apps', company:'Zepto', logo:'âš¡', color:'#7c3aed', location:'Mumbai (On-site)', type:'Full-time', experience:'2â€“4 yrs', salary:'â‚¹18â€“30 LPA', posted:'1d ago', deadline:'Jan 18, 2027', category:'Design', skills:['Figma','Motion Design','User Research','Prototyping','Design Systems'], description:'Design intuitive and delightful experiences for Zepto\'s 10-minute grocery delivery app used by 5M+ urban shoppers daily.', responsibilities:['Own end-to-end design for checkout and discovery','Build and maintain Zepto design system','Conduct user interviews and usability tests','Create motion and micro-interaction specs','Collaborate closely with engineering'], perks:['ESOPs','Zepto Credits','Health Cover','Premium Workspace','Flexible Hours'], openings:3, applicants:234, views:1170, featured:false, urgent:false, verified:true, rating:4.5, employees:'2,000+', industry:'Quick Commerce' },
+  { id:132, title:'Quantitative Analyst', company:'Goldman Sachs India', logo:'ðŸ¦', color:'#3b82f6', location:'Bangalore (On-site)', type:'Full-time', experience:'0â€“2 yrs', salary:'â‚¹25â€“45 LPA', posted:'1d ago', deadline:'Jan 28, 2027', category:'Data & AI', skills:['Python','Statistics','C++','Derivatives Pricing','Stochastic Calculus'], description:'Build quantitative models for derivatives pricing, risk and trade execution at Goldman Sachs Bangalore engineering hub.', responsibilities:['Develop pricing models for complex derivatives','Backtest trading strategies','Implement real-time risk calculators','Collaborate with global quant teams','Write production-quality C++ code'], perks:['Competitive Salary','Annual Bonus','RSUs','Premium Health Cover','International Mobility'], openings:5, applicants:612, views:3060, featured:true, urgent:false, verified:true, rating:4.7, employees:'50,000+', industry:'Investment Banking' },
+  { id:133, title:'Generative AI Engineer', company:'Adobe India', logo:'ðŸŽ¨', color:'#f43f5e', location:'Noida (Hybrid)', type:'Hybrid', experience:'2â€“5 yrs', salary:'â‚¹25â€“45 LPA', posted:'2d ago', deadline:'Feb 5, 2027', category:'Data & AI', skills:['Python','Diffusion Models','LLM','PyTorch','CUDA'], description:'Build next-generation AI features for Adobe Firefly, Photoshop and Creative Cloud AI powering 30M+ creative professionals.', responsibilities:['Train image and video generation models','Build ControlNet fine-tuning pipelines','Optimize inference for consumer hardware','Collaborate with product and research teams','File patents on novel architectures'], perks:['RSUs','Premium Health','Education Reimbursement','Creative Software Suite','International Projects'], openings:4, applicants:489, views:2445, featured:true, urgent:true, verified:true, rating:4.7, employees:'30,000+', industry:'Creative Software' },
+  { id:134, title:'Engineering Manager â€“ Backend', company:'Groww', logo:'ðŸ’š', color:'#10b981', location:'Bangalore (On-site)', type:'Full-time', experience:'5â€“8 yrs', salary:'â‚¹45â€“70 LPA', posted:'3d ago', deadline:'Jan 10, 2027', category:'Engineering', skills:['Java','System Design','Team Leadership','Microservices','PostgreSQL'], description:'Lead the backend engineering team building trading and investment infrastructure for 10M+ Groww investors.', responsibilities:['Manage and grow a team of 8â€“12 engineers','Drive architecture decisions','Own reliability and scalability','Recruit top engineering talent','Partner with product and data teams'], perks:['ESOPs','Generous Compensation','Health Cover','WFH Flexibility','Annual Offsite'], openings:2, applicants:287, views:1435, featured:false, urgent:false, verified:true, rating:4.6, employees:'2,000+', industry:'FinTech' },
+  { id:135, title:'Staff Software Engineer â€“ Infrastructure', company:'Dunzo', logo:'ðŸƒ', color:'#10b981', location:'Bangalore (Remote)', type:'Remote', experience:'5â€“8 yrs', salary:'â‚¹35â€“60 LPA', posted:'5d ago', deadline:'Dec 22, 2026', category:'Cloud', skills:['Go','Kubernetes','Kafka','CockroachDB','Terraform'], description:'Architect and build distributed systems enabling Dunzo\'s hyper-local delivery network across 7 Indian cities.', responsibilities:['Define distributed systems architecture','Lead platform engineering team','Drive technical roadmap','Own production reliability','Mentor senior engineers'], perks:['Remote First','ESOPs','Learning Budget','Health Cover','Quarterly Team Meetups'], openings:2, applicants:198, views:990, featured:false, urgent:false, verified:true, rating:4.2, employees:'1,000+', industry:'Quick Commerce' },
+  { id:136, title:'Data Analyst â€“ Marketing', company:'Nykaa', logo:'ðŸ’„', category:'Data & AI', color:'#e91e8c', location:'Mumbai (Hybrid)', type:'Hybrid', experience:'0â€“2 yrs', salary:'â‚¹6â€“12 LPA', posted:'2d ago', deadline:'Jan 5, 2027', skills:['SQL','Python','Google Analytics','Meta Ads','Excel'], description:'Analyze marketing performance and customer acquisition data for Nykaa â€” India\'s leading beauty and fashion platform with 30M+ users.', responsibilities:['Build marketing attribution models','Create campaign performance dashboards','Run cohort analysis on customer LTV','Track influencer ROI metrics','Present weekly insights to CMO'], perks:['Nykaa Product Allowance','Health Cover','WFH Flexibility','Performance Bonus','Annual Retreat'], openings:5, applicants:198, views:990, featured:false, urgent:false, verified:true, rating:4.2, employees:'5,000+', industry:'Retail' },
+  { id:137, title:'Compiler Engineer', company:'Texas Instruments India', logo:'ðŸ”´', color:'#ef4444', location:'Bangalore (On-site)', type:'Full-time', experience:'1â€“3 yrs', salary:'â‚¹12â€“22 LPA', posted:'4d ago', deadline:'Jan 25, 2027', category:'Engineering', skills:['C++','LLVM','Compiler Optimizations','Assembly','DSP'], description:'Work on TI\'s industry-leading C/C++ compiler toolchain for MSP430 and C2000 microcontroller families powering billions of embedded devices.', responsibilities:['Implement compiler backend optimizations','Port LLVM passes for TI DSPs','Debug codegen issues from customer reports','Write regression test suites','Publish internal technical notes'], perks:['Health Cover','ESOPs','Global Mobility','Patents Incentive','Learning Budget'], openings:3, applicants:145, views:725, featured:false, urgent:false, verified:true, rating:4.4, employees:'30,000+', industry:'Semiconductors' },
+  { id:138, title:'Product Manager â€“ B2B SaaS', company:'Zoho Corporation', logo:'ðŸŸ§', color:'#e42527', location:'Chennai (On-site)', type:'Full-time', experience:'3â€“6 yrs', salary:'â‚¹20â€“38 LPA', posted:'1d ago', deadline:'Jan 20, 2027', category:'Product', skills:['Product Strategy','User Research','SQL','PRD Writing','B2B SaaS'], description:'Own product roadmap for one of Zoho\'s 55+ SaaS products used by 80M+ users worldwide â€” a rare opportunity to lead an entire product.', responsibilities:['Define product vision and roadmap','Work with customers to gather requirements','Partner with engineering on delivery','Track activation and retention metrics','Represent product at Zoholics conference'], perks:['ESOPs','Free Meals on Campus','Health Cover','Annual Bonus','Family Medical Cover'], openings:4, applicants:356, views:1780, featured:false, urgent:false, verified:true, rating:4.5, employees:'15,000+', industry:'SaaS' },
+  { id:139, title:'Infrastructure Security Engineer', company:'Paytm', logo:'ðŸ’™', color:'#00b9f1', location:'Noida (On-site)', type:'Full-time', experience:'2â€“5 yrs', salary:'â‚¹16â€“28 LPA', posted:'3d ago', deadline:'Jan 12, 2027', category:'Security', skills:['AWS Security','IAM','WAF','Python','Vulnerability Management'], description:'Secure Paytm\'s cloud infrastructure handling 300M wallet transactions and â‚¹1Cr+ daily settlements.', responsibilities:['Harden AWS IAM and VPC configurations','Run quarterly vulnerability assessments','Build security automation in Python','Manage WAF and DDoS protection','Conduct security reviews for new services'], perks:['ESOPs','Health Cover','Meal Card','Learning Budget','Annual Bonus'], openings:4, applicants:212, views:1060, featured:false, urgent:false, verified:true, rating:4.1, employees:'10,000+', industry:'FinTech' },
+  { id:140, title:'Software Engineer â€“ Recommendations', company:'Amazon India', logo:'ðŸ“¦', color:'#ff9900', location:'Bangalore (On-site)', type:'Full-time', experience:'1â€“3 yrs', salary:'â‚¹25â€“45 LPA', posted:'6h ago', deadline:'Feb 5, 2027', category:'Engineering', skills:['Java','Python','Distributed Systems','ML','AWS'], description:'Build recommendation systems surfacing the right products to 300M+ Amazon India customers and powering billions of â‚¹ in annual GMV.', responsibilities:['Design scalable recommendation services in Java','Run A/B tests on ranking algorithms','Build ML features and data pipelines','Review designs and code','Drive operational excellence'], perks:['RSUs','Signing Bonus','Premium Health','Meal Card','World-class Tech'], openings:6, applicants:824, views:4120, featured:true, urgent:true, verified:true, rating:4.6, employees:'100,000+', industry:'E-Commerce' },
+  { id:141, title:'Technical Program Manager', company:'Infosys', logo:'ðŸ”µ', color:'#007cc3', location:'Pune (Hybrid)', type:'Hybrid', experience:'3â€“6 yrs', salary:'â‚¹18â€“30 LPA', posted:'2d ago', deadline:'Jan 8, 2027', category:'Product', skills:['Program Management','Agile','JIRA','Stakeholder Management','Technical Background'], description:'Drive delivery of large-scale digital transformation programs for Fortune 500 clients from Infosys Pune campus.', responsibilities:['Manage cross-functional delivery teams','Track milestones and resolve dependencies','Run Agile ceremonies','Manage client expectations','Drive escalation resolution'], perks:['Health Cover','Annual Bonus','Learning Certifications','Onsite Opportunities','Employee Wellness'], openings:10, applicants:298, views:1490, featured:false, urgent:false, verified:true, rating:4.2, employees:'300,000+', industry:'IT Services' },
+  { id:142, title:'Cloud Solutions Architect', company:'AWS India (Amazon)', logo:'â˜ï¸', color:'#ff9900', location:'Mumbai (Hybrid)', type:'Hybrid', experience:'5â€“8 yrs', salary:'â‚¹40â€“70 LPA', posted:'1d ago', deadline:'Feb 10, 2027', category:'Cloud', skills:['AWS','Solution Architecture','Cloud Migration','Customer Presentations','Well-Architected'], description:'Help strategic AWS customers architect and migrate workloads to cloud â€” working with CTO-level stakeholders across BFSI, healthcare and retail.', responsibilities:['Design cloud architectures for enterprise customers','Run AWS Well-Architected Reviews','Lead proof-of-concept workshops','Create technical proposals','Mentor customer engineering teams'], perks:['RSUs','Annual Bonus','Premium Health','Education Reimbursement','Global Customer Exposure'], openings:4, applicants:456, views:2280, featured:true, urgent:false, verified:true, rating:4.8, employees:'100,000+', industry:'Cloud' },
+  { id:143, title:'Game Developer (Unity)', company:'Nazara Technologies', logo:'ðŸŽ®', color:'#7c3aed', location:'Mumbai (Hybrid)', type:'Hybrid', experience:'1â€“4 yrs', salary:'â‚¹8â€“18 LPA', posted:'4d ago', deadline:'Jan 15, 2027', category:'Engineering', skills:['Unity','C#','Shader Graph','Physics','Multiplayer Networking'], description:'Build mobile games for Nazara\'s portfolio including Cricket, World Cricket Championship and Kiddopia reaching 100M+ gamers.', responsibilities:['Develop gameplay mechanics in Unity','Optimize draw calls and memory usage','Implement multiplayer using Photon','Build shaders with Shader Graph','Debug platform-specific issues'], perks:['Game Credits','Health Cover','Flexible Hours','Annual Bonus','Game Jams'], openings:5, applicants:267, views:1335, featured:false, urgent:false, verified:true, rating:4.2, employees:'1,000+', industry:'Gaming' },
+  { id:144, title:'Climate & Sustainability Analyst', company:'Mahindra Group', logo:'ðŸš—', color:'#c41e3a', location:'Mumbai (Hybrid)', type:'Hybrid', experience:'1â€“3 yrs', salary:'â‚¹8â€“16 LPA', posted:'3d ago', deadline:'Jan 22, 2027', category:'Data & AI', skills:['Python','ESG Reporting','Carbon Accounting','Tableau','Sustainability Frameworks'], description:'Track and report Mahindra Group ESG metrics across 260+ subsidiaries and drive decarbonization initiatives.', responsibilities:['Collect scope 1/2/3 emission data','Build GHG inventory models','Prepare CDP and BRSR reports','Analyze supply chain sustainability risk','Support green bond issuance'], perks:['Health Cover','EV Discount','Annual Bonus','WFH Flexibility','Purpose-Driven Work'], openings:3, applicants:134, views:670, featured:false, urgent:false, verified:true, rating:4.4, employees:'100,000+', industry:'Conglomerate' },
+  { id:145, title:'Network Engineer', company:'Airtel India', logo:'ðŸ“¡', color:'#e40000', location:'Gurgaon (On-site)', type:'Full-time', experience:'2â€“4 yrs', salary:'â‚¹10â€“18 LPA', posted:'5d ago', deadline:'Jan 10, 2027', category:'Engineering', skills:['BGP','MPLS','Python','Network Automation','Cisco IOS'], description:'Design and operate Airtel\'s 5G and fiber backbone network serving 350M+ subscribers across India.', responsibilities:['Configure and optimise BGP routing','Automate network provisioning with Python','Troubleshoot P1 network incidents','Plan capacity for 5G rollout','Document network topology changes'], perks:['Airtel SIM Benefits','Health Cover','Annual Bonus','Learning Budget','Housing Allowance'], openings:8, applicants:189, views:945, featured:false, urgent:false, verified:true, rating:4.1, employees:'30,000+', industry:'Telecom' },
+  { id:146, title:'Space Mission Software Engineer', company:'Skyroot Aerospace', logo:'ðŸš€', color:'#7c3aed', location:'Hyderabad (On-site)', type:'Full-time', experience:'1â€“3 yrs', salary:'â‚¹10â€“20 LPA', posted:'2d ago', deadline:'Jan 28, 2027', category:'Engineering', skills:['C','Python','RTOS','GNC','MATLAB/Simulink'], description:'Write flight software for Vikram series launch vehicles â€” India\'s first privately-built commercial rockets.', responsibilities:['Develop flight software in C on RTOS','Implement GNC algorithms','Write HIL test frameworks','Perform code reviews for safety-critical software','Prepare for ISRO certification'], perks:['ESOPs','Health Cover','Patriotic Mission','Annual Bonus','Flat Hierarchy'], openings:5, applicants:312, views:1560, featured:true, urgent:false, verified:true, rating:4.7, employees:'500â€“1,000', industry:'Space Tech' },
+  { id:147, title:'Senior Data Engineer', company:'Razorpay', logo:'âš¡', color:'#3395ff', location:'Bangalore (On-site)', type:'Full-time', experience:'3â€“6 yrs', salary:'â‚¹25â€“42 LPA', posted:'1d ago', deadline:'Feb 1, 2027', category:'Data & AI', skills:['Spark','dbt','Airflow','Python','Snowflake'], description:'Build Razorpay\'s data platform processing â‚¹15L Cr in annual payment volume â€” enabling real-time analytics for merchants and risk teams.', responsibilities:['Design and maintain data warehouse','Build ELT pipelines with dbt','Optimize Spark job performance','Implement data quality monitoring','Enable self-service analytics'], perks:['ESOPs','Annual Bonus','Health Cover','Remote Friendly','Learning Stipend'], openings:4, applicants:345, views:1725, featured:false, urgent:false, verified:true, rating:4.6, employees:'3,000+', industry:'FinTech' },
+  { id:148, title:'UI Engineer â€“ Design System', company:'Hotstar (Disney+)', logo:'ðŸŽ¬', color:'#0ea5e9', location:'Mumbai (Remote)', type:'Remote', experience:'2â€“4 yrs', salary:'â‚¹16â€“28 LPA', posted:'3d ago', deadline:'Jan 5, 2027', category:'Engineering', skills:['React','TypeScript','CSS-in-JS','Accessibility','Storybook'], description:'Build and maintain the Star Design System powering Hotstar\'s streaming UI across Web, TV, Android and iOS.', responsibilities:['Implement accessible UI components','Write Storybook documentation','Enforce design token consistency','Drive adoption across product teams','Maintain npm package releases'], perks:['Remote First','Disney+ Subscription','Health Cover','Learning Budget','ESOPs'], openings:4, applicants:234, views:1170, featured:false, urgent:false, verified:true, rating:4.5, employees:'3,000+', industry:'Streaming' },
+  { id:149, title:'Bioinformatics Engineer', company:'Strand Life Sciences', logo:'ðŸ§¬', color:'#10b981', location:'Bangalore (Hybrid)', type:'Hybrid', experience:'1â€“3 yrs', salary:'â‚¹8â€“16 LPA', posted:'4d ago', deadline:'Jan 15, 2027', category:'Engineering', skills:['Python','GATK','Nextflow','AWS','Bioinformatics Pipelines'], description:'Build cloud-based genomics pipelines enabling precision oncology diagnosis for cancer patients across 50+ hospitals.', responsibilities:['Develop NGS analysis pipelines in Nextflow','Deploy and scale pipelines on AWS Batch','Validate pipeline accuracy against gold standards','Integrate with laboratory information systems','Document pipeline methodology'], perks:['Health Cover','Annual Bonus','Learning Stipend','Flexible Hours','Meaningful Mission'], openings:3, applicants:134, views:670, featured:false, urgent:false, verified:true, rating:4.5, employees:'100â€“500', industry:'HealthTech' },
+  { id:150, title:'AI Product Manager', company:'BYJU\'s', logo:'ðŸ“š', color:'#00a3e0', location:'Bangalore (Hybrid)', type:'Hybrid', experience:'3â€“6 yrs', salary:'â‚¹25â€“42 LPA', posted:'2d ago', deadline:'Jan 20, 2027', category:'Product', skills:['AI Product Strategy','NLP','A/B Testing','EdTech','Data Analysis'], description:'Lead AI product strategy for BYJU\'s adaptive learning engine personalising lessons for 150M+ students across India and global markets.', responsibilities:['Define AI feature roadmap for personalised learning','Work with ML teams on recommendation models','Conduct student learning research','A/B test content and pacing algorithms','Present AI impact metrics to leadership'], perks:['ESOPs','Health Cover','Learning Credits','WFH Flexibility','Annual Bonus'], openings:2, applicants:389, views:1945, featured:false, urgent:false, verified:true, rating:4.1, employees:'30,000+', industry:'EdTech' },
 ];
 
 const CATEGORIES = ['All', 'Engineering', 'Data & AI', 'Design', 'Product', 'Mobile', 'Cloud', 'Security'];
 const JOB_TYPES = ['All Types', 'Full-time', 'Part-time', 'Remote', 'Hybrid', 'Contract'];
-const EXPERIENCES = ['All Levels', '0–2 yrs', '1–3 yrs', '1–4 yrs', '2–4 yrs', '2–5 yrs', '3–6 yrs', '5–8 yrs'];
+const EXPERIENCES = ['All Levels', '0â€“2 yrs', '1â€“3 yrs', '1â€“4 yrs', '2â€“4 yrs', '2â€“5 yrs', '3â€“6 yrs', '5â€“8 yrs'];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  pending:     { label: 'Under Review',  color: '#f59e0b', bg: '#f59e0b18', icon: '⏳' },
-  reviewed:    { label: 'Reviewed',      color: '#3b82f6', bg: '#3b82f618', icon: '👁️' },
-  shortlisted: { label: 'Shortlisted',   color: '#8b5cf6', bg: '#8b5cf618', icon: '⭐' },
-  interview:   { label: 'Interview',     color: '#06b6d4', bg: '#06b6d418', icon: '📅' },
-  hired:       { label: 'Hired 🎉',      color: '#10b981', bg: '#10b98118', icon: '🎉' },
-  accepted:    { label: 'Accepted 🎉',   color: '#10b981', bg: '#10b98118', icon: '✅' },
-  rejected:    { label: 'Not Selected',  color: '#ef4444', bg: '#ef444418', icon: '❌' },
+  pending:     { label: 'Under Review',  color: '#f59e0b', bg: '#f59e0b18', icon: 'â³' },
+  reviewed:    { label: 'Reviewed',      color: '#3b82f6', bg: '#3b82f618', icon: 'ðŸ‘ï¸' },
+  shortlisted: { label: 'Shortlisted',   color: '#8b5cf6', bg: '#8b5cf618', icon: 'â­' },
+  interview:   { label: 'Interview',     color: '#06b6d4', bg: '#06b6d418', icon: 'ðŸ“…' },
+  hired:       { label: 'Hired ðŸŽ‰',      color: '#10b981', bg: '#10b98118', icon: 'ðŸŽ‰' },
+  accepted:    { label: 'Accepted ðŸŽ‰',   color: '#10b981', bg: '#10b98118', icon: 'âœ…' },
+  rejected:    { label: 'Not Selected',  color: '#ef4444', bg: '#ef444418', icon: 'âŒ' },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Apply Modal — Full Form connected to backend
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Apply Modal â€” Full Form connected to backend
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ApplyModal({ job, onClose, onSuccess, token, user }: {
   job: Job; onClose: () => void; onSuccess: (app: ApplicationRecord) => void;
   token: string | null; user: any;
@@ -184,6 +223,14 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [savedApp, setSavedApp] = useState<ApplicationRecord | null>(null);
+
+  // Lock body scroll while job apply modal is open
+  useEffect(() => {
+    const sb = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--scrollbar-width', `${sb}px`);
+    document.body.classList.add('modal-open');
+    return () => document.body.classList.remove('modal-open');
+  }, []);
 
   const [form, setForm] = useState({
     userName: user?.name || '',
@@ -231,7 +278,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
 
   const steps = ['Personal Info', 'Education & Resume', 'Cover Letter'];
 
-  return (
+  return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(10px)', padding: 16 }}>
       <motion.div initial={{ opacity: 0, scale: 0.93, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
         style={{ background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 24, width: '100%', maxWidth: 560, maxHeight: '92vh', overflowY: 'auto', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -243,7 +290,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
             <div style={{ width: 46, height: 46, borderRadius: 12, background: `${job.color}18`, border: `1.5px solid ${job.color}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{job.logo}</div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{job.title}</div>
-              <div style={{ fontSize: 12.5, color: job.color, fontWeight: 600 }}>{job.company} · {job.location}</div>
+              <div style={{ fontSize: 12.5, color: job.color, fontWeight: 600 }}>{job.company} Â· {job.location}</div>
             </div>
           </div>
 
@@ -254,7 +301,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
                 {steps.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     <div style={{ width: 26, height: 26, borderRadius: '50%', background: i < step ? job.color : i === step ? job.color : 'var(--surface-2)', border: `2px solid ${i <= step ? job.color : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i <= step ? '#fff' : 'var(--text-3)', transition: 'all 0.3s', flexShrink: 0 }}>
-                      {i < step ? '✓' : i + 1}
+                      {i < step ? 'âœ“' : i + 1}
                     </div>
                     {i < steps.length - 1 && <div style={{ flex: 1, height: 2, background: i < step ? job.color : 'var(--border)', transition: 'background 0.3s', margin: '0 4px' }} />}
                   </div>
@@ -278,7 +325,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
                   <CheckCircle size={42} color="#fff" />
                 </div>
               </motion.div>
-              <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Application Submitted! 🎉</h3>
+              <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Application Submitted! ðŸŽ‰</h3>
               <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6, marginBottom: 6 }}>
                 Your application for <strong style={{ color: 'var(--text)' }}>{job.title}</strong> at <strong style={{ color: job.color }}>{job.company}</strong> has been received.
               </p>
@@ -287,7 +334,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
               {savedApp && (
                 <div style={{ background: '#10b98112', border: '1px solid #10b98130', borderRadius: 14, padding: '14px 18px', textAlign: 'left', marginBottom: 20 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#10b981', marginBottom: 8 }}>Application Details</div>
-                  {[['Application ID', savedApp._id?.slice(-8).toUpperCase()], ['Status', 'Under Review ⏳'], ['Company', job.company], ['Role', job.title]].map(([k, v]) => (
+                  {[['Application ID', savedApp._id?.slice(-8).toUpperCase()], ['Status', 'Under Review â³'], ['Company', job.company], ['Role', job.title]].map(([k, v]) => (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0', borderBottom: '1px solid #10b98118' }}>
                       <span style={{ color: 'var(--text-3)' }}>{k}</span>
                       <span style={{ color: 'var(--text)', fontWeight: 600 }}>{v}</span>
@@ -337,8 +384,8 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
                     </div>
                     {[
                       { label: 'College / University *', key: 'userCollege', placeholder: 'Anna University, Chennai', icon: <GraduationCap size={13} /> },
-                      { label: 'Branch / Specialization *', key: 'userBranch', placeholder: 'B.Tech – Computer Science & Engineering', icon: <BookIcon /> },
-                      { label: 'Resume / Portfolio Link *', key: 'resumeLink', placeholder: 'drive.google.com/… or github.com/…', icon: <LinkIcon size={13} /> },
+                      { label: 'Branch / Specialization *', key: 'userBranch', placeholder: 'B.Tech â€“ Computer Science & Engineering', icon: <BookIcon /> },
+                      { label: 'Resume / Portfolio Link *', key: 'resumeLink', placeholder: 'drive.google.com/â€¦ or github.com/â€¦', icon: <LinkIcon size={13} /> },
                     ].map(f => (
                       <div key={f.key}>
                         <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>{f.label}</label>
@@ -354,14 +401,14 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
                     <div>
                       <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 8 }}>Skills Being Highlighted</label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {job.skills.map(sk => (
+                        {(job.skills ?? []).map(sk => (
                           <span key={sk} style={{ fontSize: 11.5, fontWeight: 600, padding: '4px 11px', borderRadius: 99, background: `${job.color}15`, color: job.color, border: `1px solid ${job.color}30` }}>{sk}</span>
                         ))}
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', marginTop: 4 }}>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setStep(0)}>← Back</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setStep(0)}>â† Back</button>
                       <button type="button" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 7 }}
                         onClick={() => { if (canNext1) setStep(2); }}>
                         Next Step <ArrowRight size={14} />
@@ -379,7 +426,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
                     </div>
                     <div>
                       <textarea className="inp" rows={8}
-                        placeholder={`Dear ${job.company} Hiring Team,\n\nI am excited to apply for the ${job.title} role…\n\nMy key strengths include [mention relevant skills]…\n\nI look forward to contributing to your team.\n\nThank you,\n${form.userName}`}
+                        placeholder={`Dear ${job.company} Hiring Team,\n\nI am excited to apply for the ${job.title} roleâ€¦\n\nMy key strengths include [mention relevant skills]â€¦\n\nI look forward to contributing to your team.\n\nThank you,\n${form.userName}`}
                         value={form.coverLetter} onChange={e => update('coverLetter', e.target.value)}
                         style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.7, minHeight: 200 }} />
                       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, textAlign: 'right' }}>{form.coverLetter.length} / 2000 chars</div>
@@ -409,9 +456,9 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
                     )}
 
                     <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', marginTop: 4 }}>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setStep(1)}>← Back</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setStep(1)}>â† Back</button>
                       <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 180, justifyContent: 'center' }} disabled={submitting}>
-                        {submitting ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Submitting…</> : <><Send size={14} /> Submit Application</>}
+                        {submitting ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Submittingâ€¦</> : <><Send size={14} /> Submit Application</>}
                       </button>
                     </div>
                   </motion.div>
@@ -421,7 +468,8 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
           )}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -430,9 +478,9 @@ function BookIcon() {
   return <FileText size={13} />;
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // My Applications Dashboard Tab
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MyApplications({ token }: { token: string | null }) {
   const [apps, setApps] = useState<ApplicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -460,7 +508,7 @@ function MyApplications({ token }: { token: string | null }) {
 
   if (!token) return (
     <div style={{ textAlign: 'center', padding: '64px 0' }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>ðŸ”</div>
       <h3 style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)', marginBottom: 8 }}>Sign in to track applications</h3>
       <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Login or register to apply for jobs and track your application status.</p>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
@@ -475,10 +523,10 @@ function MyApplications({ token }: { token: string | null }) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 12, marginBottom: 22 }}>
         {[
-          { label: 'Total Applied', val: apps.length, color: '#7c3aed', icon: '📋' },
-          { label: 'Shortlisted', val: apps.filter(a => a.status === 'shortlisted').length, color: '#8b5cf6', icon: '⭐' },
-          { label: 'Interviews', val: apps.filter(a => a.status === 'interview').length, color: '#06b6d4', icon: '📅' },
-          { label: 'Offers', val: apps.filter(a => ['hired', 'accepted'].includes(a.status)).length, color: '#10b981', icon: '🎉' },
+          { label: 'Total Applied', val: apps.length, color: '#7c3aed', icon: 'ðŸ“‹' },
+          { label: 'Shortlisted', val: apps.filter(a => a.status === 'shortlisted').length, color: '#8b5cf6', icon: 'â­' },
+          { label: 'Interviews', val: apps.filter(a => a.status === 'interview').length, color: '#06b6d4', icon: 'ðŸ“…' },
+          { label: 'Offers', val: apps.filter(a => ['hired', 'accepted'].includes(a.status)).length, color: '#10b981', icon: 'ðŸŽ‰' },
         ].map(s => (
           <div key={s.label} style={{ background: `${s.color}10`, border: `1px solid ${s.color}25`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 22 }}>{s.icon}</span>
@@ -512,7 +560,7 @@ function MyApplications({ token }: { token: string | null }) {
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '56px 0' }}>
-          <div style={{ fontSize: 52, marginBottom: 14 }}>📭</div>
+          <div style={{ fontSize: 52, marginBottom: 14 }}>ðŸ“­</div>
           <h3 style={{ fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>{filter === 'all' ? 'No applications yet' : `No ${STATUS_CONFIG[filter]?.label} applications`}</h3>
           <p style={{ fontSize: 14, color: 'var(--text-3)' }}>Browse the jobs above and hit "Apply Now" to get started.</p>
         </div>
@@ -528,7 +576,7 @@ function MyApplications({ token }: { token: string | null }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{ width: 44, height: 44, borderRadius: 11, background: matchedJob ? `${matchedJob.color}18` : 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                      {matchedJob?.logo || '💼'}
+                      {matchedJob?.logo || 'ðŸ’¼'}
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 2 }}>{app.itemTitle}</div>
@@ -545,7 +593,7 @@ function MyApplications({ token }: { token: string | null }) {
                 <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 8 }}>
                   {[
                     { label: 'Applied on', val: new Date(app.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), icon: <Calendar size={11} /> },
-                    { label: 'Resume', val: app.resumeLink ? <a href={app.resumeLink} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-light)', textDecoration: 'none' }}>View Resume →</a> : 'Not provided', icon: <FileText size={11} /> },
+                    { label: 'Resume', val: app.resumeLink ? <a href={app.resumeLink} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-light)', textDecoration: 'none' }}>View Resume â†’</a> : 'Not provided', icon: <FileText size={11} /> },
                     { label: 'App ID', val: `#${app._id?.slice(-8).toUpperCase()}`, icon: <ClipboardList size={11} /> },
                   ].map((item, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)' }}>
@@ -566,7 +614,7 @@ function MyApplications({ token }: { token: string | null }) {
                     return (
                       <div key={s} style={{ display: 'flex', alignItems: 'center', flex: idx < arr.length - 1 ? '1 1 auto' : 'none' }}>
                         <div title={STATUS_CONFIG[s]?.label} style={{ width: 20, height: 20, borderRadius: '50%', background: isRejected && idx === currentIdx ? '#ef4444' : isActive ? st.color : 'var(--surface-2)', border: `2px solid ${isActive ? st.color : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, flexShrink: 0, transition: 'all 0.3s', cursor: 'default' }}>
-                          {isActive && !isRejected && '✓'}
+                          {isActive && !isRejected && 'âœ“'}
                         </div>
                         {idx < arr.length - 1 && <div style={{ flex: 1, height: 2, background: isActive && idx < currentIdx ? st.color : 'var(--border)', transition: 'background 0.3s', minWidth: 8 }} />}
                       </div>
@@ -589,9 +637,9 @@ function MyApplications({ token }: { token: string | null }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Job Detail Drawer
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
   job: Job; onClose: () => void; onApply: () => void; saved: boolean; onToggleSave: () => void; hasApplied: boolean;
 }) {
@@ -617,8 +665,8 @@ function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
           <div>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{job.title}</h2>
-              {job.urgent && <span style={{ fontSize: 10, fontWeight: 700, background: '#ef444418', color: '#ef4444', padding: '2px 8px', borderRadius: 99 }}>🔥 URGENT</span>}
-              {job.featured && <span style={{ fontSize: 10, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 8px', borderRadius: 99 }}>⭐ FEATURED</span>}
+              {job.urgent && <span style={{ fontSize: 10, fontWeight: 700, background: '#ef444418', color: '#ef4444', padding: '2px 8px', borderRadius: 99 }}>ðŸ”¥ URGENT</span>}
+              {job.featured && <span style={{ fontSize: 10, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 8px', borderRadius: 99 }}>â­ FEATURED</span>}
             </div>
             <p style={{ fontSize: 13.5, color: job.color, fontWeight: 700, marginBottom: 5 }}>{job.company}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12, color: 'var(--text-2)' }}>
@@ -632,18 +680,18 @@ function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
 
         {hasApplied ? (
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', background: '#10b98114', border: '1px solid #10b98130', borderRadius: 12, color: '#10b981', fontWeight: 700, fontSize: 13.5 }}>
-            <CheckCircle size={16} /> Application Already Submitted — Track status below
+            <CheckCircle size={16} /> Application Already Submitted â€” Track status below
           </div>
         ) : (
           <button onClick={onApply} className="btn btn-primary" style={{ width: '100%', marginTop: 14, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Send size={15} /> Apply Now — {job.openings} opening{job.openings > 1 ? 's' : ''}
+            <Send size={15} /> Apply Now â€” {job.openings} opening{job.openings > 1 ? 's' : ''}
           </button>
         )}
       </div>
 
       <div style={{ padding: 22, flex: 1 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 22 }}>
-          {[{ icon: <Users size={14} />, val: job.applicants.toLocaleString(), label: 'Applicants' }, { icon: <Eye size={14} />, val: job.views.toLocaleString(), label: 'Views' }, { icon: <Star size={14} />, val: job.rating.toFixed(1), label: 'Rating' }].map((s, i) => (
+          {[{ icon: <Users size={14} />, val: (job.applicants ?? 0).toLocaleString(), label: 'Applicants' }, { icon: <Eye size={14} />, val: (job.views ?? 0).toLocaleString(), label: 'Views' }, { icon: <Star size={14} />, val: (job.rating ?? 0).toFixed(1), label: 'Rating' }].map((s, i) => (
             <div key={i} style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>
               <div style={{ color: job.color, marginBottom: 4, display: 'flex', justifyContent: 'center' }}>{s.icon}</div>
               <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>{s.val}</div>
@@ -671,14 +719,14 @@ function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
         <section style={{ marginBottom: 20 }}>
           <h4 style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 8 }}>Skills Required</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {job.skills.map(sk => <span key={sk} style={{ fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 99, background: `${job.color}15`, color: job.color, border: `1px solid ${job.color}30` }}>{sk}</span>)}
+            {(job.skills ?? []).map(sk => <span key={sk} style={{ fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 99, background: `${job.color}15`, color: job.color, border: `1px solid ${job.color}30` }}>{sk}</span>)}
           </div>
         </section>
 
         <section style={{ marginBottom: 20 }}>
           <h4 style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 8 }}>Perks & Benefits</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {job.perks.map(p => <span key={p} style={{ fontSize: 12, padding: '5px 12px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>✅ {p}</span>)}
+            {(job.perks ?? []).map(p => <span key={p} style={{ fontSize: 12, padding: '5px 12px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>âœ… {p}</span>)}
           </div>
         </section>
 
@@ -701,9 +749,9 @@ function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Job Card
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function JobCard({ job, onClick, saved, onToggleSave, index, hasApplied }: {
   job: Job; onClick: () => void; saved: boolean; onToggleSave: (e: React.MouseEvent) => void; index: number; hasApplied: boolean;
 }) {
@@ -727,8 +775,8 @@ function JobCard({ job, onClick, saved, onToggleSave, index, hasApplied }: {
             <div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 1 }}>
                 <h3 style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--text)' }}>{job.title}</h3>
-                {job.urgent && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#ef444420', color: '#ef4444', padding: '2px 7px', borderRadius: 99 }}>🔥 URGENT</span>}
-                {job.featured && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 7px', borderRadius: 99 }}>⭐ Featured</span>}
+                {job.urgent && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#ef444420', color: '#ef4444', padding: '2px 7px', borderRadius: 99 }}>ðŸ”¥ URGENT</span>}
+                {job.featured && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 7px', borderRadius: 99 }}>â­ Featured</span>}
               </div>
               <p style={{ fontSize: 12.5, fontWeight: 600, color: job.color }}>{job.company}</p>
             </div>
@@ -745,10 +793,10 @@ function JobCard({ job, onClick, saved, onToggleSave, index, hasApplied }: {
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-            {job.skills.slice(0, 4).map(sk => (
+            {(job.skills ?? []).slice(0, 4).map(sk => (
               <span key={sk} style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 99, background: `${job.color}12`, color: job.color, border: `1px solid ${job.color}25` }}>{sk}</span>
             ))}
-            {job.skills.length > 4 && <span style={{ fontSize: 11, color: 'var(--text-3)', padding: '3px 6px' }}>+{job.skills.length - 4}</span>}
+            {(job.skills ?? []).length > 4 && <span style={{ fontSize: 11, color: 'var(--text-3)', padding: '3px 6px' }}>+{(job.skills ?? []).length - 4}</span>}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -767,9 +815,9 @@ function JobCard({ job, onClick, saved, onToggleSave, index, hasApplied }: {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Main Page
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function JobPortalPage() {
   const { user, token } = useAuth();
   const [q, setQ] = useState('');
@@ -836,7 +884,7 @@ export default function JobPortalPage() {
   return (
     <div className="page" style={{ minHeight: '100vh', paddingTop: 60 }}>
 
-      {/* ── HERO ── */}
+      {/* â”€â”€ HERO â”€â”€ */}
       <div className="banner" style={{ background: 'linear-gradient(180deg,rgba(6,10,20,0.95) 0%,transparent 100%)' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 100% at 20% 50%,rgba(124,58,237,0.13),transparent)' }} />
         <div className="mesh-bg" style={{ position: 'absolute', inset: 0, opacity: 0.3 }} />
@@ -853,10 +901,10 @@ export default function JobPortalPage() {
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {[
-                { icon: '💼', val: '2,400+', label: 'Active Jobs', color: '#7c3aed' },
-                { icon: '🏢', val: '180+', label: 'Companies', color: '#3b82f6' },
-                { icon: '🎯', val: '94%', label: 'Placement Rate', color: '#10b981' },
-                { icon: '💰', val: '₹8.4 LPA', label: 'Avg Package', color: '#f59e0b' },
+                { icon: 'ðŸ’¼', val: '2,400+', label: 'Active Jobs', color: '#7c3aed' },
+                { icon: 'ðŸ¢', val: '180+', label: 'Companies', color: '#3b82f6' },
+                { icon: 'ðŸŽ¯', val: '94%', label: 'Placement Rate', color: '#10b981' },
+                { icon: 'ðŸ’°', val: 'â‚¹8.4 LPA', label: 'Avg Package', color: '#f59e0b' },
               ].map(s => (
                 <div key={s.label} className="glass" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 14 }}>
                   <span style={{ fontSize: 18 }}>{s.icon}</span>
@@ -873,7 +921,7 @@ export default function JobPortalPage() {
 
       <div className="container" style={{ paddingTop: 24, paddingBottom: 80 }}>
 
-        {/* ── MAIN TABS ── */}
+        {/* â”€â”€ MAIN TABS â”€â”€ */}
         <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 5, marginBottom: 24, width: 'fit-content' }}>
           {[
             { id: 'jobs', label: 'Browse Jobs', icon: <Search size={14} /> },
@@ -887,10 +935,10 @@ export default function JobPortalPage() {
           ))}
         </div>
 
-        {/* ── APPLICATIONS PANEL ── */}
+        {/* â”€â”€ APPLICATIONS PANEL â”€â”€ */}
         {tab === 'applications' && <MyApplications token={token} />}
 
-        {/* ── JOBS / SAVED PANEL ── */}
+        {/* â”€â”€ JOBS / SAVED PANEL â”€â”€ */}
         {(tab === 'jobs' || tab === 'saved') && (
           <>
             {/* Search & filters */}
@@ -898,11 +946,11 @@ export default function JobPortalPage() {
               <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                 <div style={{ position: 'relative', flex: '1 1 280px' }}>
                   <Search size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
-                  <input className="inp" value={q} onChange={e => setQ(e.target.value)} placeholder="Search jobs, companies, skills…" style={{ paddingLeft: 40, width: '100%' }} />
+                  <input className="inp" value={q} onChange={e => setQ(e.target.value)} placeholder="Search jobs, companies, skillsâ€¦" style={{ paddingLeft: 40, width: '100%' }} />
                 </div>
                 <button onClick={() => setShowFilters(p => !p)}
                   style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 18px', height: 44, borderRadius: 12, border: `1.5px solid ${showFilters ? 'var(--accent)' : 'var(--border)'}`, background: showFilters ? 'rgba(124,58,237,0.1)' : 'var(--surface)', color: showFilters ? 'var(--accent)' : 'var(--text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}>
-                  <SlidersHorizontal size={14} /> Filters {showFilters ? '▲' : '▼'}
+                  <SlidersHorizontal size={14} /> Filters {showFilters ? 'â–²' : 'â–¼'}
                 </button>
               </div>
 
@@ -943,14 +991,14 @@ export default function JobPortalPage() {
               <p style={{ fontSize: 13, color: 'var(--text-3)' }}><span style={{ color: 'var(--text)', fontWeight: 700 }}>{filtered.length}</span> jobs found</p>
               {appliedIds.size > 0 && (
                 <button onClick={() => setTab('applications')} style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent-light)', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 99, padding: '4px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <ClipboardList size={12} /> {appliedIds.size} application{appliedIds.size > 1 ? 's' : ''} → Track
+                  <ClipboardList size={12} /> {appliedIds.size} application{appliedIds.size > 1 ? 's' : ''} â†’ Track
                 </button>
               )}
             </div>
 
             {filtered.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '64px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>ðŸ”</div>
                 <h3 style={{ fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>{tab === 'saved' ? 'No saved jobs yet' : 'No jobs match your filters'}</h3>
                 <p style={{ fontSize: 14, color: 'var(--text-3)' }}>{tab === 'saved' ? 'Bookmark jobs to find them here.' : 'Try adjusting your search or filters.'}</p>
               </div>
@@ -970,14 +1018,14 @@ export default function JobPortalPage() {
               style={{ marginTop: 44, background: 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(79,70,229,0.07))', border: '1px solid rgba(124,58,237,0.22)', borderRadius: 20, padding: '24px 28px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
               <div style={{ width: 48, height: 48, borderRadius: 13, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Bell size={22} color="#fff" /></div>
               <div style={{ flex: 1, minWidth: 180 }}>
-                <h3 style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--text)', marginBottom: 3 }}>🔔 Get Job Alerts</h3>
+                <h3 style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--text)', marginBottom: 3 }}>ðŸ”” Get Job Alerts</h3>
                 <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Be first to know about new jobs matching your profile.</p>
               </div>
               {alertSent ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontWeight: 700, fontSize: 14 }}><CheckCircle size={18} /> Subscribed!</div>
               ) : (
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <input className="inp" placeholder="Your email…" value={alertEmail} onChange={e => setAlertEmail(e.target.value)} style={{ minWidth: 200 }} />
+                  <input className="inp" placeholder="Your emailâ€¦" value={alertEmail} onChange={e => setAlertEmail(e.target.value)} style={{ minWidth: 200 }} />
                   <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={() => alertEmail && setAlertSent(true)}>Subscribe</button>
                 </div>
               )}
@@ -1002,7 +1050,7 @@ export default function JobPortalPage() {
         )}
       </div>
 
-      {/* ── DRAWER ── */}
+      {/* â”€â”€ DRAWER â”€â”€ */}
       <AnimatePresence>
         {activeJob && (
           <>
@@ -1029,7 +1077,7 @@ export default function JobPortalPage() {
         )}
       </AnimatePresence>
 
-      {/* Portal job apply modal → saves to localStorage */}
+      {/* Portal job apply modal â†’ saves to localStorage */}
       <PortalApplyModal
         open={!!portalApplyJob}
         onClose={() => setPortalApplyJob(null)}
@@ -1044,3 +1092,4 @@ export default function JobPortalPage() {
     </div>
   );
 }
+

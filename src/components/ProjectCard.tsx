@@ -37,10 +37,10 @@ export default function ProjectCard({ project: p, index }: { project: Project; i
               {p.companyLogo}
             </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0', lineHeight: 1.2 }}>{p.company}</div>
+              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', lineHeight: 1.2 }}>{p.company}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                <MapPin size={10} color="#475569" />
-                <span style={{ fontSize: 11, color: '#475569' }}>{p.location}</span>
+                <MapPin size={10} color="var(--text-3)" />
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{p.location}</span>
               </div>
             </div>
           </div>
@@ -59,12 +59,12 @@ export default function ProjectCard({ project: p, index }: { project: Project; i
         </div>
 
         {/* Title */}
-        <h3 className="line-clamp-2 font-display" style={{ fontWeight: 700, fontSize: 16, color: '#f1f5f9', lineHeight: 1.3, marginBottom: 10, transition: 'color 0.2s' }}>
+        <h3 className="line-clamp-2 font-display" style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', lineHeight: 1.3, marginBottom: 10, transition: 'color 0.2s' }}>
           {p.title}
         </h3>
 
         {/* Description */}
-        <p className="line-clamp-2" style={{ fontSize: 12, color: '#64748b', lineHeight: 1.65, marginBottom: 14 }}>
+        <p className="line-clamp-2" style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.65, marginBottom: 14 }}>
           {p.description}
         </p>
 
@@ -82,15 +82,15 @@ export default function ProjectCard({ project: p, index }: { project: Project; i
         <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(124,58,237,0.2),transparent)', marginBottom: 14 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14, textAlign: 'center' }}>
           <div>
-            <div className="font-mono" style={{ fontWeight: 700, fontSize: 13, color: '#a78bfa' }}>{p.stipend}</div>
-            <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>Stipend</div>
+            <div className="font-mono" style={{ fontWeight: 700, fontSize: 13, color: 'var(--accent-light)' }}>{p.stipend}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>Stipend</div>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-              <Clock size={11} color="#475569" />
-              <span style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}>{p.duration}</span>
+              <Clock size={11} color="var(--text-3)" />
+              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{p.duration}</span>
             </div>
-            <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>Duration</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>Duration</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: `${dc}15`, color: dc, border: `1px solid ${dc}25` }}>
@@ -107,22 +107,22 @@ export default function ProjectCard({ project: p, index }: { project: Project; i
                 <Star key={j} size={11} fill={j < Math.round(p.rating) ? '#f59e0b' : 'none'} color={j < Math.round(p.rating) ? '#f59e0b' : '#334155'} />
               ))}
             </div>
-            <span style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9' }}>{p.rating}</span>
-            <span style={{ fontSize: 11, color: '#475569' }}>({p.reviews})</span>
+            <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text)' }}>{p.rating}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>({p.reviews})</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#475569' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-3)' }}>
             <Users size={11} /> {p.enrolled} enrolled
           </div>
         </div>
 
         {/* Mentor chip */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', marginBottom: 14 }}>
           <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg,${p.color},${p.color}70)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
             {p.mentor.split(' ').map(w=>w[0]).join('').slice(0,2)}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.mentor}</div>
-            <div style={{ fontSize: 10, color: '#475569', marginTop: 1 }}>{p.mentorRole}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.mentor}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{p.mentorRole}</div>
           </div>
           {p.ppo && <span className="badge badge-green" style={{ fontSize: 9, flexShrink: 0 }}>PPO</span>}
         </div>
@@ -135,7 +135,7 @@ export default function ProjectCard({ project: p, index }: { project: Project; i
               {p.spots} spot{p.spots !== 1 ? 's' : ''} left
             </span>
           </div>
-          <span style={{ fontSize: 11, color: '#475569' }}>Due {p.deadline}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Due {p.deadline}</span>
         </div>
 
         {/* CTA */}

@@ -16,30 +16,31 @@ import { portalGetAll } from '../portalData';
 function getAllEvents(): Event[] {
   const portal = portalGetAll('event').filter((e: any) => e.status === 'active').map((e: any, i: number): Event => ({
     id:                   80000 + i,
-    title:                e.title || 'Untitled Event',
-    type:                 (e.type || 'workshop') as EventType,
-    banner:               '🎤',
-    organizer:            e.organizer || e._author || 'Organizer',
-    organizerLogo:        '🏢',
-    date:                 e.date || '',
-    endDate:              e.endDate || e.date || '',
-    time:                 e.time || 'TBD',
-    duration:             e.duration || '',
-    location:             e.location || 'TBD',
-    mode:                 (e.mode || 'online') as 'online' | 'offline' | 'hybrid',
-    price:                e.price || 'Free',
-    seats:                parseInt(e.seats) || 200,
-    seatsLeft:            parseInt(e.seats) || 200,
+    title:                e.title       || 'Untitled Event',
+    category:             e.category    || 'General',
+    type:                 (['hackathon','workshop','webinar','bootcamp','career-fair','competition','conference','guest-lecture'].includes(e.type) ? e.type : 'workshop') as EventType,
+    banner:               e.banner      || '🎤',
+    organizer:            e.organizer   || e._author || 'Organizer',
+    organizerLogo:        e.organizerLogo || '🏢',
+    date:                 e.date        || '',
+    endDate:              e.endDate     || e.date || '',
+    time:                 e.time        || 'TBD',
+    duration:             e.duration    || '',
+    location:             e.location    || 'TBD',
+    mode:                 (['online','offline','hybrid'].includes(e.mode) ? e.mode : 'online') as 'online' | 'offline' | 'hybrid',
+    price:                e.price       || 'Free',
+    seats:                parseInt(e.seats)    || 200,
+    seatsLeft:            parseInt(e.seatsLeft || e.seats) || 200,
     registrationDeadline: e.registrationDeadline || e.date || '',
     description:          e.description || '',
-    skills:               typeof e.skills === 'string' ? e.skills.split(',').map((s: string) => s.trim()) : (e.skills || []),
-    tags:                 typeof e.tags === 'string' ? e.tags.split(',').map((s: string) => s.trim()) : (e.tags || []),
+    skills:               typeof e.skills === 'string' ? e.skills.split(',').map((s: string) => s.trim()) : (Array.isArray(e.skills) ? e.skills : []),
+    tags:                 typeof e.tags   === 'string' ? e.tags.split(',').map((s: string) => s.trim())   : (Array.isArray(e.tags)   ? e.tags   : []),
     speakers:             [],
-    prize:                e.prize || '',
+    prize:                e.prize       || '',
     certificate:          !!e.certificate,
     featured:             !!e.featured,
-    color:                '#f59e0b',
-    gradient:             'linear-gradient(135deg,#f59e0b,#d97706)',
+    color:                (typeof e.color === 'string' && e.color.length > 0) ? e.color : '#f59e0b',
+    gradient:             e.gradient    || 'linear-gradient(135deg,#f59e0b,#d97706)',
     _portal:              true as any,
   }));
   return [...EVENTS, ...portal];
@@ -237,7 +238,7 @@ export default function EventsPage() {
         const q2 = dQ.toLowerCase();
         const match = ev.title.toLowerCase().includes(q2) ||
           ev.organizer.toLowerCase().includes(q2) ||
-          ev.category.toLowerCase().includes(q2) ||
+          (ev.category || '').toLowerCase().includes(q2) ||
           ev.tags.some(t => t.toLowerCase().includes(q2)) ||
           ev.skills.some(s => s.toLowerCase().includes(q2)) ||
           ev.location.toLowerCase().includes(q2);
@@ -316,20 +317,22 @@ export default function EventsPage() {
               <h2 className="font-display" style={{ fontWeight: 700, fontSize: 20, color: 'var(--text)' }}>Featured Events</h2>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-              {featured.map((ev, i) => (
+              {featured.map((ev, i) => {
+                const fColor = (typeof ev.color === 'string' && ev.color.length > 0) ? ev.color : '#f59e0b';
+                return (
                 <motion.div key={ev.id}
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.38, delay: i * 0.06 }}
                   onClick={() => (ev as any)._portal ? setPortalEventItem(ev) : setSelectedEvent(ev)}
-                  style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${ev.color}30`, background: `linear-gradient(135deg, ${ev.color}12, var(--surface) 60%)`, transition: 'transform 0.2s, box-shadow 0.2s' }}
-                  whileHover={{ y: -4, boxShadow: `0 12px 40px ${ev.color}30` }}>
+                  style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${fColor}30`, background: `linear-gradient(135deg, ${fColor}12, var(--surface) 60%)`, transition: 'transform 0.2s, box-shadow 0.2s' }}
+                  whileHover={{ y: -4, boxShadow: `0 12px 40px ${fColor}30` }}>
                   {/* Top banner */}
-                  <div style={{ padding: '20px 20px 16px', background: `linear-gradient(135deg, ${ev.color}22, transparent)`, borderBottom: `1px solid ${ev.color}20` }}>
+                  <div style={{ padding: '20px 20px 16px', background: `linear-gradient(135deg, ${fColor}22, transparent)`, borderBottom: `1px solid ${fColor}20` }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ fontSize: 40 }}>{ev.banner}</div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {ev.featured && <span style={{ fontSize: 9, fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.08em' }}>⭐ FEATURED</span>}
-                        <span style={{ fontSize: 9, fontWeight: 800, color: ev.color, background: `${ev.color}18`, padding: '2px 8px', borderRadius: 999, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, color: fColor, background: `${fColor}18`, padding: '2px 8px', borderRadius: 999, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                           {EVENT_TYPES.find(t => t.id === ev.type)?.icon} {ev.type.replace('-', ' ')}
                         </span>
                       </div>
@@ -342,10 +345,10 @@ export default function EventsPage() {
                         { icon: <Calendar size={11} />, text: ev.date },
                         { icon: <Clock size={11} />,    text: ev.duration },
                         { icon: <MapPin size={11} />,   text: ev.location },
-                        { icon: <Users size={11} />,    text: `${ev.seatsLeft} left` },
+                        { icon: <Users size={11} />,    text: `${(ev.seatsLeft ?? 0).toLocaleString()} left` },
                       ].map((item, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-3)' }}>
-                          <span style={{ color: ev.color }}>{item.icon}</span>{item.text}
+                          <span style={{ color: fColor }}>{item.icon}</span>{item.text}
                         </div>
                       ))}
                     </div>
@@ -357,13 +360,14 @@ export default function EventsPage() {
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={e => { e.stopPropagation(); setSelectedEvent(ev); }}
-                        style={{ fontSize: 12, padding: '6px 16px', background: `linear-gradient(135deg, ${ev.color}, ${ev.color}cc)`, borderColor: ev.color }}>
+                        style={{ fontSize: 12, padding: '6px 16px', background: `linear-gradient(135deg, ${fColor}, ${fColor}cc)`, borderColor: fColor }}>
                         Register →
                       </button>
                     </div>
                   </div>
                 </motion.div>
-              ))}
+              );
+              })}
             </div>
           </div>
         )}
@@ -443,10 +447,12 @@ export default function EventsPage() {
               style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
               {filtered.map((ev, i) => {
                 const urgency   = urgencyLabel(ev.registrationDeadline);
-                const modeMeta  = MODE_META[ev.mode];
+                // Guard: fall back to 'online' meta if mode is unexpected
+                const modeMeta  = MODE_META[ev.mode] ?? MODE_META['online'];
                 const isReg     = registered.has(ev.id);
                 const isSaved   = savedEvents.has(ev.id);
-                const spotsPercent = Math.round(((ev.seats - ev.seatsLeft) / ev.seats) * 100);
+                const evColor   = (typeof ev.color === 'string' && ev.color.length > 0) ? ev.color : '#7c3aed';
+                const spotsPercent = Math.max(0, Math.round(((ev.seats - ev.seatsLeft) / Math.max(ev.seats, 1)) * 100));
 
                 return (
                   <motion.article key={ev.id}
@@ -457,13 +463,13 @@ export default function EventsPage() {
                     whileHover={{ y: -3, boxShadow: `0 8px 32px rgba(0,0,0,0.12)` }}>
 
                     {/* Colour stripe top */}
-                    <div style={{ height: 4, background: `linear-gradient(90deg, ${ev.color}, ${ev.color}80)` }} />
+                    <div style={{ height: 4, background: `linear-gradient(90deg, ${evColor}, ${evColor}80)` }} />
 
                     <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                       {/* Row 1: type + mode + save */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, color: ev.color, background: `${ev.color}18`, padding: '2px 9px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: evColor, background: `${evColor}18`, padding: '2px 9px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                             {EVENT_TYPES.find(t => t.id === ev.type)?.icon} {ev.type.replace('-', ' ')}
                           </span>
                           <span style={{ fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 999, background: `${modeMeta.color}15`, color: modeMeta.color }}>
@@ -494,10 +500,10 @@ export default function EventsPage() {
                           { icon: <Calendar size={11} />, text: `${ev.date}${ev.endDate ? ` – ${ev.endDate}` : ''}` },
                           { icon: <Clock size={11} />,    text: `${ev.time} · ${ev.duration}` },
                           { icon: <MapPin size={11} />,   text: ev.location },
-                          { icon: <Users size={11} />,    text: `${ev.seatsLeft.toLocaleString()} seats left` },
+                          { icon: <Users size={11} />,    text: `${(ev.seatsLeft ?? 0).toLocaleString()} seats left` },
                         ].map((item, idx) => (
                           <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-3)', overflow: 'hidden' }}>
-                            <span style={{ color: ev.color, flexShrink: 0 }}>{item.icon}</span>
+                            <span style={{ color: evColor, flexShrink: 0 }}>{item.icon}</span>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.text}</span>
                           </div>
                         ))}
@@ -526,7 +532,7 @@ export default function EventsPage() {
                           <span style={{ fontSize: 11, fontWeight: 700, color: spotsPercent > 80 ? '#ef4444' : 'var(--text-3)' }}>{spotsPercent}%</span>
                         </div>
                         <div style={{ height: 4, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${spotsPercent}%`, borderRadius: 999, background: spotsPercent > 80 ? '#ef4444' : spotsPercent > 60 ? '#f59e0b' : ev.color, transition: 'width 0.4s' }} />
+                          <div style={{ height: '100%', width: `${spotsPercent}%`, borderRadius: 999, background: spotsPercent > 80 ? '#ef4444' : spotsPercent > 60 ? '#f59e0b' : evColor, transition: 'width 0.4s' }} />
                         </div>
                       </div>
 
@@ -544,7 +550,7 @@ export default function EventsPage() {
                           <button
                             className="btn btn-primary btn-sm"
                             onClick={e => { e.stopPropagation(); setSelectedEvent(ev); }}
-                            style={{ fontSize: 12.5, padding: '8px 16px', background: `linear-gradient(135deg, ${ev.color}, ${ev.color}cc)`, borderColor: ev.color }}>
+                            style={{ fontSize: 12.5, padding: '8px 16px', background: `linear-gradient(135deg, ${evColor}, ${evColor}cc)`, borderColor: evColor }}>
                             {ev.price === 'Free' ? 'Register Free' : `Register · ${ev.price}`}
                           </button>
                         )}

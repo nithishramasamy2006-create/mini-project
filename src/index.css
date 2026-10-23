@@ -129,6 +129,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
   overflow-x: hidden;
+}
+
+/* Lock scroll when any modal is open — prevents page from scrolling behind the overlay */
+body.modal-open {
+  overflow: hidden !important;
+  /* keep layout stable on scrollbar disappearance */
+  padding-right: var(--scrollbar-width, 0px);
+
   min-height: 100vh;
   transition: background 0.3s ease, color 0.3s ease;
 }
@@ -608,4 +616,41 @@ textarea.inp {
   animation: spin 0.75s linear infinite;
   display: inline-block;
   flex-shrink: 0;
+}
+
+/* ── SECTION TAG ─────────────────────────────────────────── */
+/* Pill label used above section headings                    */
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: rgba(124,58,237,0.1);
+  border: 1px solid rgba(124,58,237,0.22);
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+[data-theme="light"] .section-tag {
+  background: rgba(109,40,217,0.08);
+  border-color: rgba(109,40,217,0.2);
+  color: var(--violet);
+}
+
+/* ── GLASS-2 ─────────────────────────────────────────────── */
+/* Slightly heavier glass surface for filter panels / cards  */
+.glass-2 {
+  background: rgba(18,18,24,0.72);
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  border: 1px solid rgba(255,255,255,0.09);
+  transition: background 0.3s, border-color 0.3s;
+}
+[data-theme="light"] .glass-2 {
+  background: rgba(255,255,255,0.78);
+  border-color: rgba(15,23,42,0.1);
 }

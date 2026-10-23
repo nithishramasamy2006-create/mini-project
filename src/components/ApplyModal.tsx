@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, CheckCircle, AlertCircle, LogIn, User, Mail, BookOpen, Building2, Upload, FileImage, Trash2 } from 'lucide-react';
 import { useAuth, type ApplyData } from '../AuthContext';
@@ -101,6 +102,15 @@ export default function ApplyModal({ open, onClose, onSuccess, type, itemId, ite
     onClose();
   };
 
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (!open) return;
+    const sb = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--scrollbar-width', `${sb}px`);
+    document.body.classList.add('modal-open');
+    return () => document.body.classList.remove('modal-open');
+  }, [open]);
+
   const typeLabel = { project: 'Project', internship: 'Internship', mentor: 'Mentor Session', course: 'Course' }[type] ?? 'Application';
 
   // ── Reusable labelled input ─────────────────────────────
@@ -131,7 +141,7 @@ export default function ApplyModal({ open, onClose, onSuccess, type, itemId, ite
     </div>
   );
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -416,6 +426,7 @@ export default function ApplyModal({ open, onClose, onSuccess, type, itemId, ite
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

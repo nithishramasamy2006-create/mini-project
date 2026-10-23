@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Zap, ArrowRight, GraduationCap, Building2, School, ShieldCheck } from 'lucide-react';
@@ -172,9 +172,9 @@ export default function LoginPage() {
         {/* Role hint */}
         <div style={{ marginTop: 22, padding: '12px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
           <strong style={{ color: 'var(--text-2)' }}>💡 Portal Guide:</strong><br />
-          <span style={{ color: '#7c3aed' }}>🎓 Student</span> — Browse courses & apply for internships<br />
-          <span style={{ color: '#3b82f6' }}>🏢 Company</span> — Post jobs & manage applications<br />
-          <span style={{ color: '#10b981' }}>🏫 College</span> — Track placements & manage students<br />
+          <span style={{ color: '#7c3aed' }}>🎓 Student</span> — Browse courses &amp; apply for internships<br />
+          <span style={{ color: '#3b82f6' }}>🏢 Company</span> — Post jobs &amp; manage applications<br />
+          <span style={{ color: '#10b981' }}>🏫 College</span> — Track placements &amp; manage students<br />
           <span style={{ color: '#f59e0b' }}>🛡️ Admin</span> — Full platform management
         </div>
       </motion.div>

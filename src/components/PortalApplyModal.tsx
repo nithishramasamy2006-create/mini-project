@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Send, User, Mail, Phone, Building2, BookOpen, Calendar } from 'lucide-react';
 import { useAuth } from '../AuthContext';
@@ -85,7 +86,16 @@ export default function PortalApplyModal({
     setTimeout(() => { handleClose(); }, 3000);
   };
 
-  return (
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (!open) return;
+    const sb = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--scrollbar-width', `${sb}px`);
+    document.body.classList.add('modal-open');
+    return () => document.body.classList.remove('modal-open');
+  }, [open]);
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -221,6 +231,7 @@ export default function PortalApplyModal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

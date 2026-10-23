@@ -491,7 +491,7 @@ export default function CoursesPage() {
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:13 }}>
                       <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-3)' }}>
                         <Users size={12} />
-                        {course.students.toLocaleString()} students
+                        {(course.students ?? 0).toLocaleString()} students
                       </span>
                       <span style={{ fontWeight:800, fontSize:16, color:'var(--accent)' }}>
                         {course.price}
