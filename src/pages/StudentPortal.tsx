@@ -72,30 +72,320 @@ function SectionHeader({ title, sub, action, link }: any) {
 }
 
 // ── Mentor Student View ───────────────────────────────────────────
-// Reads sessions+chat written by MentorPortal (company side) from shared localStorage
+// Reads sessions from 'nm_mentor_sessions' — written by MentorPortal (company side)
+// Both run on same origin (localhost:8080) so localStorage is shared.
+// Uses storage event for instant cross-tab sync + polling as fallback.
 function MentorStudentView({ studentName, studentEmail }: { studentName: string; studentEmail: string }) {
-  const [allSessions, setAllSessions] = useState<any[]>([]);
+  const [sessions,    setSessions]    = useState<any[]>([]);
   const [chatOpen,    setChatOpen]    = useState<string | null>(null);
   const [messages,    setMessages]    = useState<any[]>([]);
   const [draft,       setDraft]       = useState('');
-  const [tick,        setTick]        = useState(0); // force re-render on poll
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
   const endRef = useRef<HTMLDivElement>(null);
 
-  // ── Load all mentor sessions created for this student ──────────────
-  const reload = () => {
+  // ── Read ALL sessions from localStorage ──────────────────────────
+  const readSessions = () => {
     try {
       const raw = localStorage.getItem('nm_mentor_sessions');
-      const all: any[] = raw ? JSON.parse(raw) : [];
-      // Match by email first, then name, then fallback: show ALL (single-device demo)
-      const byEmail = all.filter(s => s.studentEmail && s.studentEmail.trim().toLowerCase() === studentEmail?.trim().toLowerCase());
-      const byName  = all.filter(s => s.studentName  && s.studentName.trim().toLowerCase()  === studentName?.trim().toLowerCase());
-      const matched = byEmail.length > 0 ? byEmail : byName.length > 0 ? byName : all;
-      // Sort newest first
-      matched.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      setAllSessions(matched);
-    } catch { setAllSessions([]); }
-    setTick(t => t + 1);
+      if (!raw) { setSessions([]); return; }
+      const all: any[] = JSON.parse(raw);
+      // Show sessions for this student. Fallback: show ALL (same-browser demo)
+      const forMe = all.filter(s =>
+        (s.studentEmail && studentEmail && s.studentEmail.trim().toLowerCase() === studentEmail.trim().toLowerCase()) ||
+        (s.studentName  && studentName  && s.studentName.trim().toLowerCase()  === studentName.trim().toLowerCase())
+      );
+      const toShow = forMe.length > 0 ? forMe : all; // show all if no match
+      toShow.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setSessions(toShow);
+    } catch (e) { setSessions([]); }
   };
+
+  // ── Read chat for open session ────────────────────────────────────
+  const readChat = (sid: string) => {
+    try {
+      const all: any[] = JSON.parse(localStorage.getItem('nm_mentor_chat') || '[]');
+      setMessages(all.filter(m => m.sessionId === sid));
+    } catch { setMessages([]); }
+  };
+
+  // ── Setup: poll + storage event (cross-tab instant sync) ──────────
+  useEffect(() => {
+    readSessions();
+    // Polling — catches same-tab writes
+    const iv = setInterval(() => { readSessions(); if (chatOpen) readChat(chatOpen); }, 1500);
+    // Storage event — catches writes from OTHER tabs/windows instantly
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'nm_mentor_sessions') readSessions();
+      if (e.key === 'nm_mentor_chat' && chatOpen) readChat(chatOpen);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => { clearInterval(iv); window.removeEventListener('storage', onStorage); };
+  }, [chatOpen]);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  // ── Send student → mentor message ─────────────────────────────────
+  const sendMsg = () => {
+    if (!draft.trim() || !chatOpen) return;
+    const msg = {
+      id: Date.now().toString(), sessionId: chatOpen,
+      from: 'student', senderName: studentName || 'Student',
+      text: draft.trim(), ts: Date.now(),
+    };
+    const all: any[] = JSON.parse(localStorage.getItem('nm_mentor_chat') || '[]');
+    localStorage.setItem('nm_mentor_chat', JSON.stringify([...all, msg]));
+    setDraft('');
+    readChat(chatOpen);
+  };
+
+  // ── Helpers ───────────────────────────────────────────────────────
+  const fmtTime = (ts: number)  => new Date(ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  const fmtDate = (str: string) => { const d = new Date(str); return isNaN(d.getTime()) ? '' : d.toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }); };
+  const countMentorMsgs = (sid: string) => {
+    try { return JSON.parse(localStorage.getItem('nm_mentor_chat') || '[]').filter((m: any) => m.sessionId === sid && m.from === 'mentor').length; }
+    catch { return 0; }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────
+  return (
+    <div>
+      {/* ── Header ── */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+        <div>
+          <h2 style={{ fontWeight:800, fontSize:22, color:'var(--text)', margin:0 }}>My Mentor Sessions</h2>
+          <p style={{ fontSize:12.5, color:'var(--text-3)', margin:'4px 0 0' }}>
+            Live sessions assigned by your mentor — join Google Meet or chat directly
+          </p>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          {/* Session count badge */}
+          <div style={{ padding:'6px 12px', borderRadius:10, background: sessions.length > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(107,114,128,0.1)', border:`1px solid ${sessions.length > 0 ? 'rgba(16,185,129,0.3)' : 'rgba(107,114,128,0.2)'}`, fontSize:12, color: sessions.length > 0 ? '#10b981' : 'var(--text-3)', fontWeight:700 }}>
+            {sessions.length > 0 ? `✅ ${sessions.length} session${sessions.length > 1 ? 's' : ''}` : '⏳ No sessions yet'}
+          </div>
+          {/* Manual refresh */}
+          <button onClick={() => { readSessions(); setLastRefresh(Date.now()); }}
+            style={{ padding:'6px 14px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text-2)', fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
+            🔄 Refresh
+          </button>
+          <Link to="/mentors" style={{ padding:'6px 14px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text)', fontSize:12, fontWeight:600, textDecoration:'none' }}>
+            Browse Mentors →
+          </Link>
+        </div>
+      </div>
+
+      {/* ── How it works info ── */}
+      <div style={{ padding:'12px 16px', borderRadius:12, background:'rgba(59,130,246,0.06)', border:'1px solid rgba(59,130,246,0.2)', marginBottom:20, display:'flex', gap:12, alignItems:'flex-start' }}>
+        <Video size={16} color="#3b82f6" style={{ marginTop:2, flexShrink:0 }} />
+        <div style={{ fontSize:12.5, color:'var(--text-2)', lineHeight:1.7 }}>
+          <strong style={{ color:'var(--text)' }}>How it works:</strong>{' '}
+          Your company mentor goes to <strong>Company Portal → 🎓 Mentor Portal</strong> tab, creates a session with a Google Meet link.
+          It will appear here automatically. Click <strong style={{ color:'#10b981' }}>Join Google Meet</strong> to enter the video call.
+          <span style={{ display:'block', fontSize:11, color:'var(--text-3)', marginTop:3 }}>
+            Last synced: {new Date(lastRefresh).toLocaleTimeString()} · Auto-refreshes every 1.5s
+          </span>
+        </div>
+      </div>
+
+      {sessions.length === 0 ? (
+        /* ── Empty State ── */
+        <div>
+          <div style={{ textAlign:'center', padding:'50px 24px', borderRadius:20, background:'var(--surface)', border:'2px dashed var(--border)', marginBottom:16 }}>
+            <div style={{ fontSize:56, marginBottom:16 }}>🎓</div>
+            <h3 style={{ fontWeight:800, fontSize:20, color:'var(--text)', marginBottom:8 }}>No Sessions Assigned Yet</h3>
+            <p style={{ color:'var(--text-3)', fontSize:13.5, maxWidth:420, margin:'0 auto 20px', lineHeight:1.7 }}>
+              Ask your company mentor to go to their <strong>Company Portal → Mentor Portal</strong> tab, click{' '}
+              <strong>"New Session"</strong>, and add your name along with a Google Meet link. It will appear here instantly.
+            </p>
+            <button onClick={() => { readSessions(); setLastRefresh(Date.now()); }}
+              style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'10px 22px', borderRadius:11, background:'linear-gradient(135deg,#3b82f6,#1d4ed8)', border:'none', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', marginBottom:12, boxShadow:'0 4px 14px rgba(59,130,246,0.35)' }}>
+              🔄 Check for new sessions
+            </button>
+            {/* Storage debug */}
+            <details style={{ textAlign:'left', maxWidth:500, margin:'12px auto 0' }}>
+              <summary style={{ fontSize:11, color:'var(--text-3)', cursor:'pointer' }}>🔧 Debug: view raw localStorage data</summary>
+              <pre style={{ marginTop:8, padding:'10px', borderRadius:9, background:'var(--bg)', border:'1px solid var(--border)', fontSize:10.5, color:'var(--text-3)', maxHeight:140, overflowY:'auto', whiteSpace:'pre-wrap', wordBreak:'break-all', textAlign:'left' }}>
+                nm_mentor_sessions: {localStorage.getItem('nm_mentor_sessions') || '(empty)'}
+              </pre>
+            </details>
+          </div>
+        </div>
+      ) : (
+        /* ── Session Cards ── */
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          {sessions.map(s => {
+            const newMsgs    = countMentorMsgs(s.id);
+            const isChatOpen = chatOpen === s.id;
+
+            return (
+              <div key={s.id} style={{ borderRadius:18, background:'var(--surface)', border:'1px solid var(--border)', overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.07)' }}>
+                {/* Top accent bar */}
+                <div style={{ height:4, background:'linear-gradient(90deg,#3b82f6,#7c3aed,#10b981)' }} />
+
+                <div style={{ padding:'20px 22px', display:'flex', flexDirection:'column', gap:14 }}>
+
+                  {/* ── Session Info Row ── */}
+                  <div style={{ display:'flex', alignItems:'flex-start', gap:14 }}>
+                    <div style={{ width:50, height:50, borderRadius:14, background:'linear-gradient(135deg,#3b82f6,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
+                      🎓
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:800, fontSize:17, color:'var(--text)', marginBottom:6 }}>{s.topic || 'Mentor Session'}</div>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+                        {s.studentName && (
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:12, color:'var(--text-3)' }}>
+                            👤 <span style={{ color:'var(--text-2)', fontWeight:600 }}>{s.studentName}</span>
+                          </span>
+                        )}
+                        {s.scheduledAt && fmtDate(s.scheduledAt) && (
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:12, color:'var(--text-3)' }}>
+                            📅 <span style={{ color:'var(--text-2)' }}>{fmtDate(s.scheduledAt)}</span>
+                          </span>
+                        )}
+                        {s.studentEmail && (
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:12, color:'var(--text-3)' }}>
+                            ✉ <span style={{ color:'var(--text-2)' }}>{s.studentEmail}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Status badge */}
+                    <div style={{ display:'flex', flexDirection:'column', gap:5, alignItems:'flex-end', flexShrink:0 }}>
+                      <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:999, background: s.meetLink ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.1)', color: s.meetLink ? '#10b981' : '#f59e0b', border:`1px solid ${s.meetLink ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
+                        {s.meetLink ? '✓ Meet Ready' : '⏳ Meet Pending'}
+                      </span>
+                      {newMsgs > 0 && (
+                        <span style={{ fontSize:10, fontWeight:800, padding:'2px 9px', borderRadius:999, background:'rgba(239,68,68,0.12)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.25)' }}>
+                          🔴 {newMsgs} new from mentor
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Google Meet Join Button ── */}
+                  {s.meetLink ? (
+                    <a href={s.meetLink} target="_blank" rel="noopener noreferrer"
+                      style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 18px', borderRadius:14, background:'linear-gradient(135deg,rgba(16,185,129,0.1),rgba(5,150,105,0.05))', border:'2px solid rgba(16,185,129,0.35)', textDecoration:'none' }}
+                      onMouseEnter={e => { e.currentTarget.style.background='linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.1))'; e.currentTarget.style.borderColor='rgba(16,185,129,0.6)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background='linear-gradient(135deg,rgba(16,185,129,0.1),rgba(5,150,105,0.05))'; e.currentTarget.style.borderColor='rgba(16,185,129,0.35)'; }}>
+                      {/* Google Meet icon */}
+                      <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,#10b981,#059669)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 4px 16px rgba(16,185,129,0.4)' }}>
+                        <Video size={22} color="#fff" />
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:800, fontSize:15, color:'#10b981', marginBottom:3 }}>Join Google Meet</div>
+                        <div style={{ fontSize:11.5, color:'var(--text-3)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {s.meetLink}
+                        </div>
+                      </div>
+                      <div style={{ padding:'10px 20px', borderRadius:11, background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', fontWeight:800, fontSize:13.5, flexShrink:0, boxShadow:'0 3px 12px rgba(16,185,129,0.4)', whiteSpace:'nowrap' }}>
+                        Join Now →
+                      </div>
+                    </a>
+                  ) : (
+                    <div style={{ padding:'14px 16px', borderRadius:13, background:'rgba(245,158,11,0.06)', border:'1px dashed rgba(245,158,11,0.35)', display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ fontSize:24 }}>⏳</span>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:13, color:'#f59e0b', marginBottom:2 }}>Google Meet link not added yet</div>
+                        <div style={{ fontSize:12, color:'var(--text-3)' }}>Your mentor will update the session with a Meet link soon. Send a message below to request it.</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Session Notes ── */}
+                  {s.notes && (
+                    <div style={{ padding:'12px 14px', borderRadius:12, background:'rgba(124,58,237,0.06)', border:'1px solid rgba(124,58,237,0.18)', display:'flex', gap:10 }}>
+                      <span style={{ fontSize:16, flexShrink:0 }}>📝</span>
+                      <div>
+                        <div style={{ fontSize:10.5, fontWeight:700, color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:4 }}>Mentor's Notes</div>
+                        <div style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.65 }}>{s.notes}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Chat toggle button ── */}
+                  <button
+                    onClick={() => { const next = isChatOpen ? null : s.id; setChatOpen(next); if (next) readChat(next); }}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, border:`1.5px solid ${isChatOpen ? '#7c3aed' : 'var(--border)'}`, background: isChatOpen ? 'rgba(124,58,237,0.1)' : 'var(--bg)', color: isChatOpen ? '#7c3aed' : 'var(--text-2)', fontWeight:700, fontSize:13, cursor:'pointer', transition:'all 0.18s' }}>
+                    <MessageSquare size={14} />
+                    {isChatOpen ? '▲ Close Chat' : '💬 Chat with Mentor'}
+                    {newMsgs > 0 && !isChatOpen && (
+                      <span style={{ padding:'1px 8px', borderRadius:999, background:'#ef4444', color:'#fff', fontSize:10.5, fontWeight:800 }}>
+                        {newMsgs} new
+                      </span>
+                    )}
+                  </button>
+
+                  {/* ── Inline Chat Panel ── */}
+                  {isChatOpen && (
+                    <div style={{ borderRadius:14, border:'1.5px solid rgba(124,58,237,0.25)', overflow:'hidden', background:'var(--bg)' }}>
+                      {/* Chat header */}
+                      <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8, background:'rgba(124,58,237,0.06)' }}>
+                        <MessageSquare size={13} color="#7c3aed" />
+                        <span style={{ fontWeight:700, fontSize:12.5, color:'var(--text)' }}>Chat · {s.topic}</span>
+                        <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#10b981', fontWeight:600 }}>
+                          <div style={{ width:6, height:6, borderRadius:'50%', background:'#10b981' }} />
+                          Live sync
+                        </div>
+                      </div>
+
+                      {/* Messages */}
+                      <div style={{ height:260, overflowY:'auto', padding:'12px 14px', display:'flex', flexDirection:'column', gap:8 }}>
+                        {messages.length === 0 && (
+                          <div style={{ textAlign:'center', color:'var(--text-3)', fontSize:12.5, marginTop:40, lineHeight:1.8 }}>
+                            No messages yet 💬<br />
+                            <span style={{ fontSize:11 }}>Say hello to your mentor!</span>
+                          </div>
+                        )}
+                        {messages.map(m => (
+                          <div key={m.id} style={{ display:'flex', flexDirection: m.from === 'student' ? 'row-reverse' : 'row', gap:8, alignItems:'flex-end' }}>
+                            <div style={{ width:28, height:28, borderRadius:'50%', background: m.from === 'student' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#3b82f6,#1d4ed8)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:11, color:'#fff', flexShrink:0 }}>
+                              {m.senderName?.[0]?.toUpperCase() || '?'}
+                            </div>
+                            <div style={{ maxWidth:'72%' }}>
+                              <div style={{ fontSize:10, color:'var(--text-3)', marginBottom:3, textAlign: m.from === 'student' ? 'right' : 'left', fontWeight:600 }}>
+                                {m.senderName} · {fmtTime(m.ts)}
+                              </div>
+                              <div style={{ padding:'9px 13px', borderRadius: m.from === 'student' ? '14px 4px 14px 14px' : '4px 14px 14px 14px', background: m.from === 'student' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'var(--surface)', border: m.from === 'mentor' ? '1px solid var(--border)' : 'none', color: m.from === 'student' ? '#fff' : 'var(--text)', fontSize:13, lineHeight:1.55 }}>
+                                {m.text}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={endRef} />
+                      </div>
+
+                      {/* Input */}
+                      <div style={{ padding:'10px 12px', borderTop:'1px solid var(--border)', display:'flex', gap:8, background:'var(--surface)' }}>
+                        <input
+                          value={draft}
+                          onChange={e => setDraft(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMsg())}
+                          placeholder="Message your mentor… (Enter to send)"
+                          style={{ flex:1, background:'var(--bg)', border:'1px solid var(--border)', borderRadius:10, padding:'9px 13px', fontSize:13, color:'var(--text)', outline:'none' }}
+                        />
+                        <button onClick={sendMsg}
+                          style={{ width:40, height:40, borderRadius:11, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 3px 12px rgba(124,58,237,0.4)' }}>
+                          <Send size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
+export default function StudentPortal() {
+
+
 
   // ── Load chat for active session ───────────────────────────────────
   const reloadChat = (sessionId: string) => {
