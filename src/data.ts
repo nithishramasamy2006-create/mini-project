@@ -4,8 +4,9 @@
 
 export const NAV_ITEMS = [
   { path: '/',             label: 'Home' },
-  { path: '/projects',     label: 'Projects' },
+  { path: '/my-learning',  label: '📚 My Learning' },
   { path: '/courses',      label: 'Courses' },
+  { path: '/projects',     label: 'Projects' },
   { path: '/internships',  label: 'Internships' },
   { path: '/events',       label: '🎯 Events' },
   { path: '/exams',        label: '📋 Exams' },

@@ -6,7 +6,7 @@ import {
   TrendingUp, Clock, CheckCircle, XCircle, Star, Briefcase,
   Heart, Home, Save, Bell, Trophy, Users, Zap, Calendar,
   MapPin, Globe, ChevronRight, Edit3, Bookmark, GraduationCap,
-  Monitor, Building2, Play, Target, Flame, MessageSquare
+  Monitor, Building2, Play, Target, Flame, MessageSquare, Layers
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { ALL_COURSES } from '../courseData';
@@ -29,8 +29,8 @@ const STATUS_ICON: Record<string, string> = {
 // ── Sidebar Nav ───────────────────────────────────────────────────
 const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
   { id:'dashboard',   label:'Dashboard',   icon:<LayoutDashboard size={16}/> },
+  { id:'courses',     label:'My Learning', icon:<Play size={16}/> },
   { id:'projects',    label:'Projects',    icon:<Target size={16}/> },
-  { id:'courses',     label:'Courses',     icon:<BookOpen size={16}/> },
   { id:'internships', label:'Internships', icon:<Briefcase size={16}/> },
   { id:'events',      label:'Events',      icon:<Calendar size={16}/> },
   { id:'exams',       label:'Exams',       icon:<FileText size={16}/> },
@@ -265,10 +265,22 @@ export default function StudentPortal() {
         {/* ── COURSES ── */}
         {tab === 'courses' && (
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
-            <SectionHeader title="My Courses" sub={`${savedCourses.length} saved to wishlist`} action="Browse Courses" link="/courses" />
+            <SectionHeader title="My Learning" sub={`${savedCourses.length} saved · track progress & earn certificates`} action="Open My Learning" link="/my-learning" />
+            {/* Quick stats */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:12, marginBottom:24 }}>
+              {[{icon:'📚',label:'Saved',val:savedCourses.length,color:'#7c3aed'},{icon:'🏆',label:'Certificates',val:0,color:'#f59e0b'},{icon:'🔥',label:'Day Streak',val:1,color:'#ef4444'},{icon:'⏱',label:'Hours',val:savedCourses.reduce((s:number,c:any)=>s+c.hours,0),color:'#3b82f6'}].map((s:any)=>(
+                <div key={s.label} style={{ padding:'14px 16px', borderRadius:13, background:'var(--surface)', border:`1px solid ${s.color}20`, display:'flex', alignItems:'center', gap:12 }}>
+                  <span style={{ fontSize:24 }}>{s.icon}</span>
+                  <div>
+                    <div style={{ fontSize:20, fontWeight:900, color:s.color }}>{s.val}</div>
+                    <div style={{ fontSize:11, color:'var(--text-3)', fontWeight:600 }}>{s.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
             {savedCourses.length > 0 ? (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:14 }}>
-                {savedCourses.map(c => (
+                {savedCourses.map((c:any) => (
                   <div key={c.id} style={{ borderRadius:14, background:'var(--surface)', border:'1px solid var(--border)', overflow:'hidden' }}>
                     <div style={{ height:120, background:'linear-gradient(135deg,#1e1b4b,#0f172a)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:40 }}>📚</div>
                     <div style={{ padding:'12px 14px' }}>
@@ -289,6 +301,12 @@ export default function StudentPortal() {
                 <Link to="/courses" className="btn btn-primary" style={{ display:'inline-flex' }}>Browse 200+ Courses →</Link>
               </div>
             )}
+            <div style={{ marginTop:24, textAlign:'center' }}>
+              <Link to="/my-learning"
+                style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'12px 28px', borderRadius:13, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff', fontWeight:700, fontSize:14, textDecoration:'none', boxShadow:'0 4px 16px rgba(124,58,237,0.3)' }}>
+                🎓 Open Full Learning Dashboard <ChevronRight size={14}/>
+              </Link>
+            </div>
           </motion.div>
         )}
 

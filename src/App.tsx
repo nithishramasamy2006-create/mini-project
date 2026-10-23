@@ -26,6 +26,7 @@ const CourseViewer       = lazy(() => import('./pages/CourseViewer'));
 const JobPortalPage      = lazy(() => import('./pages/JobPortalPage'));
 const EventsPage         = lazy(() => import('./pages/EventsPage'));
 const ExamPortalPage     = lazy(() => import('./pages/ExamPortalPage'));
+const MyLearningPage     = lazy(() => import('./pages/MyLearningPage'));
 
 // ── Error Boundary ────────────────────────────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -141,6 +142,7 @@ export default function App() {
                     <Route path="/events"            element={<RoleRoute element={<EventsPage />} />} />
                     <Route path="/exams"             element={<RoleRoute element={<ExamPortalPage />} />} />
                     <Route path="/learn/:courseId"   element={<RoleRoute element={<CourseViewer />} />} />
+                    <Route path="/my-learning"       element={<RoleRoute element={<MyLearningPage />} />} />
 
                     {/* ── Auth pages — open to all ───────────────────── */}
                     <Route path="/login"    element={<LoginPage />} />

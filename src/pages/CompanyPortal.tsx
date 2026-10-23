@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../AuthContext';
 import ContentManager from '../components/ContentManager';
 import ApplicationAcceptancePanel from '../components/ApplicationAcceptancePanel';
+import AIResumeShortlister from '../components/AIResumeShortlister';
 import { portalGetByAuthor } from '../portalData';
 import {
   portalAppGetByAuthor,
@@ -17,7 +18,7 @@ import {
   type PortalApplication,
 } from '../portalApplications';
 
-type Tab = 'dashboard' | 'applications' | 'projects' | 'internships' | 'jobs' | 'events' | 'profile';
+type Tab = 'dashboard' | 'applications' | 'ai-shortlist' | 'projects' | 'internships' | 'jobs' | 'events' | 'profile';
 
 const TYPE_ICON: Record<string, string> = { project: '🎯', internship: '💼', job: '🏢', event: '🎪' };
 
@@ -118,13 +119,14 @@ export default function CompanyPortal() {
 
   const ACCENT='#3b82f6';
   const NAV=[
-    {id:'dashboard' as Tab,    label:'Dashboard',      icon:<BarChart2 size={15}/> },
-    {id:'applications' as Tab, label:'Applications',   icon:<Users size={15}/>,    badge:pendingCount},
-    {id:'jobs' as Tab,         label:'Job Openings',   icon:<Briefcase size={15}/>,badge:myJobs},
-    {id:'internships' as Tab,  label:'Internships',    icon:<TrendingUp size={15}/>,badge:myInternships},
-    {id:'projects' as Tab,     label:'Projects',       icon:<Layers size={15}/>,   badge:myProjects},
-    {id:'events' as Tab,       label:'Events',         icon:<Calendar size={15}/>, badge:myEvents},
-    {id:'profile' as Tab,      label:'Company Profile',icon:<Building2 size={15}/>},
+    {id:'dashboard' as Tab,     label:'Dashboard',       icon:<BarChart2 size={15}/> },
+    {id:'applications' as Tab,  label:'Applications',    icon:<Users size={15}/>,     badge:pendingCount},
+    {id:'ai-shortlist' as Tab,  label:'AI Shortlister',  icon:<span style={{fontSize:13}}>🤖</span>, badge:apps.filter(a=>a.status==='pending').length > 0 ? '✨' : undefined},
+    {id:'jobs' as Tab,          label:'Job Openings',    icon:<Briefcase size={15}/>, badge:myJobs},
+    {id:'internships' as Tab,   label:'Internships',     icon:<TrendingUp size={15}/>,badge:myInternships},
+    {id:'projects' as Tab,      label:'Projects',        icon:<Layers size={15}/>,    badge:myProjects},
+    {id:'events' as Tab,        label:'Events',          icon:<Calendar size={15}/>,  badge:myEvents},
+    {id:'profile' as Tab,       label:'Company Profile', icon:<Building2 size={15}/>},
   ];
 
   return (
@@ -224,9 +226,20 @@ export default function CompanyPortal() {
 
         {tab==='applications'&&(
           <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35}}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Student Applications</h2>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4,flexWrap:'wrap',gap:10}}>
+              <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)' }}>Student Applications</h2>
+              <button onClick={()=>setTab('ai-shortlist')} style={{padding:'9px 18px',borderRadius:11,background:'linear-gradient(135deg,#7c3aed,#4f46e5)',border:'none',color:'#fff',fontWeight:700,fontSize:12.5,cursor:'pointer',display:'flex',alignItems:'center',gap:7,boxShadow:'0 2px 12px rgba(124,58,237,0.3)'}}>
+                🤖 AI Shortlister
+              </button>
+            </div>
             <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:24 }}>Review, shortlist, interview, and <strong style={{color:'#10b981'}}>accept</strong> or <strong style={{color:'#ef4444'}}>reject</strong> student applications.</p>
             <ApplicationAcceptancePanel authorId={companyId} accentColor={ACCENT} emptyMessage="No applications yet" emptyAction={{label:'Post a Job Opening',onClick:()=>setTab('jobs')}}/>
+          </motion.div>
+        )}
+
+        {tab==='ai-shortlist'&&(
+          <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35}}>
+            <AIResumeShortlister companyId={companyId} accentColor={ACCENT} onSwitchTab={()=>setTab('applications')}/>
           </motion.div>
         )}
 

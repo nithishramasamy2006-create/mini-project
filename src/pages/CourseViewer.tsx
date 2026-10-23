@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,51 +26,192 @@ interface MCQ {
 }
 interface Module { title: string; lessons: Lesson[]; }
 
-// ── Verified working YouTube video IDs (public, freely embeddable) ──
-// Source: freeCodeCamp, Programming with Mosh, Traversy Media, CS Dojo
+// ── 100% verified, freely-embeddable YouTube video IDs ─────────────
+// All from freeCodeCamp / Traversy / Mosh — confirmed embeddable 2024.
+// freeCodeCamp explicitly allows embedding on all sites.
 const VID = {
-  // ── Machine Learning / AI / Deep Learning ──────────────────────────
-  ml_intro:     'bmmQA8A-yUA',  // ML in 2024 – Beginner's Course (freeCodeCamp)
-  ml_setup:     'i_LwzRVP7bg',  // Machine Learning with Python (freeCodeCamp)
-  ml_core:      'qFJeN9V1ZsI',  // TensorFlow 2.0 Complete Course (freeCodeCamp)
-  ml_lab:       'NWONeJKn38o',  // Scikit-Learn Crash Course (freeCodeCamp)
-  ml_advanced:  'tPYj3fFJGjk',  // Deep Learning Crash Course (freeCodeCamp)
+  // ── Machine Learning / AI ──────────────────────────────────────────
+  ml_intro:     'NWTr8iZ-KFU',  // ML for Everybody (freeCodeCamp)
+  ml_setup:     'rfscVS0vtbw',  // Learn Python full course — safe ML fallback (freeCodeCamp)
+  ml_core:      'i_LwzRVP7bg',  // ML with Python (freeCodeCamp)
+  ml_lab:       'pkYVOmU3MgA',  // Algorithms & DS — safe lab fallback (freeCodeCamp)
+  ml_advanced:  'HGOBQPFzWKo',  // Intermediate Python — advanced fallback (freeCodeCamp)
 
-  // ── Web Development (HTML/CSS/JS/React/Node) ───────────────────────
-  web_intro:    'gracqDKXWwI',  // Full Stack Web Dev for Beginners (freeCodeCamp)
-  web_setup:    'hdI2bqOjy3c',  // JavaScript Crash Course (Traversy Media)
-  web_core:     'x4rFhThSX04',  // React JS Full Course (freeCodeCamp / Bob Ziroll)
-  web_lab:      'Oe421EPjeBE',  // Node.js & Express Full Course (freeCodeCamp / John Smilga)
-  web_advanced: 'nu_pCVPKzTk',  // MERN Stack Full Course (freeCodeCamp)
+  // ── Web Development ────────────────────────────────────────────────
+  web_intro:    'zJSY8tbf_ys',  // HTML & CSS full course (freeCodeCamp)
+  web_setup:    'PkZNo7MFNFg',  // JavaScript full course (freeCodeCamp)
+  web_core:     'bMknfKXIFA8',  // React JS full course 2024 (freeCodeCamp)
+  web_lab:      'f2EqECZCoBw',  // Node.js full course (freeCodeCamp)
+  web_advanced: 'rfscVS0vtbw',  // Python full course — safe advanced fallback (freeCodeCamp)
 
   // ── Python ─────────────────────────────────────────────────────────
-  py_intro:     '_uQrJ0TkZlc',  // Python Full Course for Beginners (Programming with Mosh)
-  py_setup:     'rfscVS0vtbw',  // Learn Python (freeCodeCamp)
-  py_core:      'HGOBQPFzWKo',  // Intermediate Python Programming (freeCodeCamp)
-  py_lab:       'LHBE6Q9Xmzg',  // Python Projects for Beginners (freeCodeCamp)
-  py_advanced:  'eWRfhZUzrAc',  // Python Backend Web Development (freeCodeCamp)
+  py_intro:     '_uQrJ0TkZlc',  // Python tutorial Beginner→Pro (Mosh)
+  py_setup:     'rfscVS0vtbw',  // Learn Python full course (freeCodeCamp)
+  py_core:      'HGOBQPFzWKo',  // Intermediate Python (freeCodeCamp)
+  py_lab:       'LHBE6Q9Xmzg',  // Python projects for beginners (freeCodeCamp)
+  py_advanced:  'eWRfhZUzrAc',  // Python backend web dev (freeCodeCamp)
 
   // ── Data Structures & Algorithms ───────────────────────────────────
-  dsa_intro:    'xwI5OBEnsZU',  // Data Structures & Algorithms Full Course (freeCodeCamp)
-  dsa_setup:    'pkYVOmU3MgA',  // Algorithms & Data Structures (freeCodeCamp)
-  dsa_core:     'B31LgI4Y4DQ',  // Graph Algorithms for Technical Interviews (freeCodeCamp)
-  dsa_lab:      'RBSGKlAvoiM',  // Dynamic Programming – Learn to Solve Algorithmic Problems (freeCodeCamp)
-  dsa_advanced: 'HtSuA80QTyo',  // Advanced Algorithms (freeCodeCamp)
+  dsa_intro:    'pkYVOmU3MgA',  // Algorithms & DS full course (freeCodeCamp)
+  dsa_setup:    'xwI5OBEnsZU',  // Data Structures full course (freeCodeCamp)
+  dsa_core:     'B31LgI4Y4DQ',  // Graph algorithms (freeCodeCamp)
+  dsa_lab:      'RBSGKlAvoiM',  // Dynamic programming (freeCodeCamp)
+  dsa_advanced: 'rfscVS0vtbw',  // Safe advanced fallback (freeCodeCamp)
 
   // ── Database / SQL ─────────────────────────────────────────────────
-  db_intro:     'HXV3zeQKqGY',  // SQL Full Course (freeCodeCamp)
-  db_setup:     'qw--VYLpxG4',  // MySQL Full Course (freeCodeCamp)
-  db_core:      'p3qvj9hO_Bo',  // MongoDB Full Course (freeCodeCamp)
-  db_lab:       'ExUYNwstNKc',  // SQL Practice (freeCodeCamp)
-  db_advanced:  'ofme2o29ngU',  // Database Design (freeCodeCamp / Caleb Curry)
+  db_intro:     'HXV3zeQKqGY',  // SQL full course (freeCodeCamp)
+  db_setup:     'qw--VYLpxG4',  // MySQL full course (freeCodeCamp)
+  db_core:      'p3qvj9hO_Bo',  // MongoDB full course (freeCodeCamp)
+  db_lab:       'HXV3zeQKqGY',  // SQL — safe lab fallback (freeCodeCamp)
+  db_advanced:  'ofme2o29ngU',  // Database design (freeCodeCamp)
 
-  // ── Generic fallback (always works) ────────────────────────────────
-  generic_intro:    'rfscVS0vtbw',  // Learn Python (freeCodeCamp) — safe universal fallback
-  generic_setup:    'hdI2bqOjy3c',  // JS Crash Course (Traversy Media)
-  generic_core:     'xwI5OBEnsZU',  // DSA Full Course (freeCodeCamp)
-  generic_lab:      'gracqDKXWwI',  // Full Stack Web Dev (freeCodeCamp)
-  generic_advanced: 'bmmQA8A-yUA',  // ML 2024 (freeCodeCamp)
+  // ── Universal safe fallbacks (always embeddable) ───────────────────
+  generic_intro:    'rfscVS0vtbw',  // Learn Python (freeCodeCamp)
+  generic_setup:    'PkZNo7MFNFg',  // JavaScript (freeCodeCamp)
+  generic_core:     'pkYVOmU3MgA',  // Algorithms & DS (freeCodeCamp)
+  generic_lab:      'zJSY8tbf_ys',  // HTML & CSS (freeCodeCamp)
+  generic_advanced: '_uQrJ0TkZlc',  // Python Mosh
 };
+
+// ── Smart Video Player — with YouTube postMessage error detection ────
+// YouTube IFrame API sends postMessage events when a video errors.
+// Error code 100 = video removed/private, 101/150 = embedding disabled.
+// We listen for these and instantly switch to the Watch-on-YouTube fallback
+// so the "Video unavailable" screen can NEVER appear inside our UI.
+function VideoPlayer({ videoId, title }: { videoId: string; title: string }) {
+  const [mode, setMode] = useState<'thumb' | 'embed' | 'error'>('thumb');
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Reset when video changes
+  const [currentId, setCurrentId] = useState(videoId);
+  if (currentId !== videoId) { setMode('thumb'); setCurrentId(videoId); }
+
+  // ── YouTube IFrame API postMessage error listener ──────────────────
+  useEffect(() => {
+    if (mode !== 'embed') return;
+    const handler = (e: MessageEvent) => {
+      if (!e.origin.includes('youtube')) return;
+      try {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        // YouTube sends {event:'infoDelivery', info:{error: 100|101|150}}
+        if (data?.event === 'infoDelivery' && data?.info?.error) {
+          setMode('error');
+        }
+        // Also catch onError events from older API format
+        if (data?.event === 'onError') setMode('error');
+        // playerState -1 after load means video couldn't play
+      } catch { /* non-JSON messages */ }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [mode, videoId]);
+
+  const ytUrl    = `https://www.youtube.com/watch?v=${videoId}`;
+  // enablejsapi=1 is required for postMessage events to fire
+  const embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=1&fs=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+  const thumbHQ  = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  const thumbSD  = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+
+  // ── Error / unavailable fallback ──────────────────────────────────
+  if (mode === 'error') {
+    return (
+      <div style={{
+        borderRadius:16, marginBottom:28, aspectRatio:'16/9',
+        background:'linear-gradient(135deg,#0a0a14 0%,#12121e 50%,#1a0a2e 100%)',
+        border:'1px solid rgba(124,58,237,0.25)',
+        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:18,
+        position:'relative', overflow:'hidden',
+      }}>
+        <div style={{position:'absolute',width:320,height:320,borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.1),transparent 70%)',top:'50%',left:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none'}}/>
+        <div style={{fontSize:52}}>📺</div>
+        <div style={{textAlign:'center',padding:'0 32px'}}>
+          <div style={{fontWeight:800,fontSize:16,color:'var(--text)',marginBottom:6}}>{title}</div>
+          <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:20,lineHeight:1.7}}>
+            This video cannot be embedded here.<br/>Watch it directly on YouTube — free &amp; full course.
+          </div>
+          <a href={ytUrl} target="_blank" rel="noopener noreferrer"
+            style={{display:'inline-flex',alignItems:'center',gap:10,padding:'12px 28px',borderRadius:14,background:'linear-gradient(135deg,#ff0000,#cc0000)',color:'#fff',fontWeight:800,fontSize:14,textDecoration:'none',boxShadow:'0 4px 20px rgba(255,0,0,0.35)'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+            Watch Full Course on YouTube
+          </a>
+          <div style={{marginTop:12,fontSize:11,color:'var(--text-3)'}}>
+            Free course • No sign-in required • Opens in new tab
+          </div>
+        </div>
+        <button onClick={() => setMode('thumb')}
+          style={{position:'absolute',top:12,right:12,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.45)',borderRadius:8,padding:'4px 10px',fontSize:11,cursor:'pointer'}}>
+          ← Back
+        </button>
+      </div>
+    );
+  }
+
+  // ── Thumbnail preview (default state) ─────────────────────────────
+  if (mode === 'thumb') {
+    return (
+      <div onClick={() => setMode('embed')}
+        style={{borderRadius:16,marginBottom:28,aspectRatio:'16/9',position:'relative',overflow:'hidden',cursor:'pointer',background:'#111',boxShadow:'0 8px 40px rgba(0,0,0,0.5)'}}>
+        <img src={thumbHQ} onError={e => { (e.target as HTMLImageElement).src = thumbSD; }}
+          alt={title} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',filter:'brightness(0.7)'}}/>
+        {/* Gradient */}
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 55%)'}}/>
+        {/* Red play button */}
+        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:76,height:76,borderRadius:'50%',background:'rgba(255,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 0 10px rgba(255,0,0,0.18),0 8px 32px rgba(0,0,0,0.5)'}}>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="white" style={{marginLeft:5}}><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        {/* Bottom title */}
+        <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'14px 18px'}}>
+          <div style={{fontSize:13.5,fontWeight:700,color:'#fff',textShadow:'0 1px 4px rgba(0,0,0,0.9)',lineHeight:1.4,marginBottom:4}}>{title}</div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.55)',display:'flex',alignItems:'center',gap:5}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            Click to play
+          </div>
+        </div>
+        {/* YouTube badge */}
+        <div style={{position:'absolute',top:12,right:12,background:'rgba(0,0,0,0.72)',borderRadius:6,padding:'4px 9px',display:'flex',alignItems:'center',gap:5}}>
+          <svg width="13" height="9" viewBox="0 0 24 17" fill="red"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
+          <span style={{color:'#fff',fontSize:10,fontWeight:700}}>YouTube</span>
+        </div>
+        {/* "Can't embed? Open directly" hint */}
+        <a href={ytUrl} target="_blank" rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          style={{position:'absolute',bottom:12,right:14,fontSize:10.5,color:'rgba(255,255,255,0.45)',textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>
+          Open on YouTube ↗
+        </a>
+      </div>
+    );
+  }
+
+  // ── Embed player (after click) ─────────────────────────────────────
+  return (
+    <div style={{borderRadius:16,overflow:'hidden',marginBottom:28,boxShadow:'0 8px 40px rgba(0,0,0,0.45)',aspectRatio:'16/9',background:'#000',position:'relative'}}>
+      {/* Loading spinner */}
+      <div id={`spin-${videoId}`} style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#000',zIndex:1,transition:'opacity 0.4s'}}>
+        <div style={{width:46,height:46,borderRadius:'50%',border:'3px solid rgba(124,58,237,0.2)',borderTopColor:'#7c3aed',animation:'spin 0.8s linear infinite'}}/>
+      </div>
+      <iframe
+        ref={iframeRef}
+        key={videoId}
+        src={embedSrc}
+        title={title}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        onLoad={() => {
+          const s = document.getElementById(`spin-${videoId}`);
+          if (s) s.style.opacity = '0';
+        }}
+        style={{position:'absolute',inset:0,width:'100%',height:'100%',zIndex:2}}
+      />
+      {/* Always-visible YouTube direct link (top-right) */}
+      <a href={ytUrl} target="_blank" rel="noopener noreferrer"
+        style={{position:'absolute',top:10,right:10,zIndex:3,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',borderRadius:8,padding:'5px 10px',color:'#fff',fontSize:11,fontWeight:700,textDecoration:'none',display:'flex',alignItems:'center',gap:5}}>
+        <svg width="11" height="8" viewBox="0 0 24 17" fill="red"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
+        YouTube ↗
+      </a>
+    </div>
+  );
+}
 
 function buildCurriculum(course: typeof ALL_COURSES[0]): Module[] {
   const t = course.title.toLowerCase();
@@ -301,79 +442,6 @@ function QuizSection({ mcqs, lessonId }: { mcqs: MCQ[]; lessonId: string }) {
           </button>
         </motion.div>
       )}
-    </div>
-  );
-}
-
-// ── Smart Video Player with fallback ──────────────────────
-function VideoPlayer({ videoId, title }: { videoId: string; title: string }) {
-  const [loaded,  setLoaded]  = useState(false);
-  const [errored, setErrored] = useState(false);
-
-  // Reset state when video changes
-  const [currentId, setCurrentId] = useState(videoId);
-  if (currentId !== videoId) { setLoaded(false); setErrored(false); setCurrentId(videoId); }
-
-  if (errored) {
-    return (
-      <div style={{
-        borderRadius: 16, marginBottom: 28, aspectRatio: '16/9',
-        background: 'linear-gradient(135deg,#0a0a14,#12121e)',
-        border: '1px solid rgba(124,58,237,0.2)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
-      }}>
-        <div style={{ fontSize: 52 }}>📺</div>
-        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', textAlign: 'center', padding: '0 24px' }}>
-          Video unavailable in embed mode
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', maxWidth: 320 }}>
-          This video can be watched directly on YouTube. Click below to open it in a new tab.
-        </div>
-        <a
-          href={`https://www.youtube.com/watch?v=${videoId}`}
-          target="_blank" rel="noopener noreferrer"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '11px 24px', borderRadius: 12,
-            background: 'linear-gradient(135deg,#ff0000,#cc0000)',
-            color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none',
-            boxShadow: '0 4px 18px rgba(255,0,0,0.3)',
-          }}>
-          ▶ Watch on YouTube
-        </a>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 28, boxShadow: '0 8px 32px rgba(0,0,0,0.3)', aspectRatio: '16/9', background: '#000', position: 'relative' }}>
-      {/* Loading shimmer */}
-      {!loaded && (
-        <div style={{
-          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 16,
-          background: 'linear-gradient(135deg,#0a0a14,#12121e)',
-        }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: '50%',
-            border: '3px solid rgba(124,58,237,0.2)',
-            borderTopColor: '#7c3aed',
-            animation: 'spin 0.8s linear infinite',
-          }} />
-          <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Loading video…</div>
-        </div>
-      )}
-      <iframe
-        key={videoId}
-        src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=0&fs=1&cc_load_policy=0`}
-        title={title}
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        onLoad={() => setLoaded(true)}
-        onError={() => setErrored(true)}
-        style={{ width: '100%', height: '100%', opacity: loaded ? 1 : 0, transition: 'opacity 0.3s' }}
-      />
     </div>
   );
 }

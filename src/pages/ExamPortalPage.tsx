@@ -1,10 +1,11 @@
-﻿import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, X, MapPin, Calendar, Clock, Users, Award, BookOpen,
   Monitor, Building2, Layers, ChevronDown, ChevronRight, ChevronLeft,
   CheckCircle, Flame, Filter, FileText, Download, Bell, Globe,
-  Shield, Zap, AlertCircle, Info
+  Shield, Zap, AlertCircle, Info, Share2, Copy, MessageCircle,
+  Link, CheckCheck
 } from 'lucide-react';
 import {
   EXAMS, EXAM_CATEGORIES, TN_CENTERS, STATUS_META,
@@ -89,7 +90,7 @@ function CenterCard({ center, selected, onSelect }: { center: ExamCenter; select
         <MapPin size={10} style={{ flexShrink: 0, marginTop: 1 }} />
         <span>{center.address}</span>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>ðŸ“ {center.landmark} Â· ðŸ“ž {center.phone}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>📍 {center.landmark} · 📞 {center.phone}</div>
       <div style={{ marginBottom: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
           <span style={{ fontSize: 10.5, color: 'var(--text-3)' }}>Seats available</span>
@@ -104,7 +105,7 @@ function CenterCard({ center, selected, onSelect }: { center: ExamCenter; select
       <a href={center.mapLink} target="_blank" rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
         style={{ fontSize: 10.5, color: 'var(--accent)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3, textDecoration: 'none' }}>
-        <Globe size={10} /> View on Map â†—
+        <Globe size={10} /> View on Map ↗
       </a>
     </div>
   );
@@ -120,6 +121,47 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
   });
   const [loading, setLoading] = useState(false);
   const [regNo,   setRegNo]   = useState('');
+  const [showShare, setShowShare] = useState(false);
+  const [copied,    setCopied]    = useState(false);
+
+  // ── Share helpers ────────────────────────────────────────────
+  const shareText = () =>
+    `🎓 I just registered for ${exam.title} on NaanMudhalvan!\n` +
+    `📋 Reg No: ${regNo}\n` +
+    `📅 Exam Date: ${exam.examDate}  ⏰ ${exam.examTime}\n` +
+    `Register now: ${window.location.href}`;
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${exam.title} — Admit Card`,
+          text: shareText(),
+          url: window.location.href,
+        });
+      } catch {/* user cancelled */}
+    }
+  };
+
+  const handleCopyText = async () => {
+    await navigator.clipboard.writeText(shareText());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const whatsappUrl = () =>
+    `https://wa.me/?text=${encodeURIComponent(shareText())}`;
+
+  const twitterUrl = () =>
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      `🎓 Just registered for ${exam.title} on @NaanMudhalvan!\n📋 Reg: ${regNo}  📅 ${exam.examDate}\n`
+    )}&url=${encodeURIComponent(window.location.href)}`;
 
   // â”€â”€ Admit Card PDF Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const downloadAdmitCard = () => {
@@ -129,7 +171,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admit Card â€” ${exam.shortTitle}</title>
+  <title>Admit Card ”” ${exam.shortTitle}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Arial', sans-serif; background:#f0f4f8; display:flex; justify-content:center; padding:24px; }
@@ -216,10 +258,10 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
 
   <!-- HEADER -->
   <div class="header">
-    <div class="logo-box">âš¡</div>
+    <div class="logo-box">⚡</div>
     <div class="header-text">
       <h1>NaanMudhalvan</h1>
-      <p>Learning Marketplace â€” Tamil Nadu</p>
+      <p>Learning Marketplace ”” Tamil Nadu</p>
     </div>
     <div class="header-right">
       <div class="tag">Hall Ticket</div>
@@ -255,9 +297,9 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
     <!-- EXAM SCHEDULE -->
     <div class="section-title" style="margin-top:18px;">Exam Schedule</div>
     <div class="schedule-grid">
-      <div class="schedule-box"><div class="icon">ðŸ“…</div><div class="lbl">Exam Date</div><div class="val">${exam.examDate}</div></div>
-      <div class="schedule-box"><div class="icon">â°</div><div class="lbl">Exam Time</div><div class="val">${exam.examTime}</div></div>
-      <div class="schedule-box"><div class="icon">â±ï¸</div><div class="lbl">Duration</div><div class="val">${exam.duration}</div></div>
+      <div class="schedule-box"><div class="icon">📅</div><div class="lbl">Exam Date</div><div class="val">${exam.examDate}</div></div>
+      <div class="schedule-box"><div class="icon">⏰</div><div class="lbl">Exam Time</div><div class="val">${exam.examTime}</div></div>
+      <div class="schedule-box"><div class="icon">⏱ï¸</div><div class="lbl">Duration</div><div class="val">${exam.duration}</div></div>
       <div class="schedule-box"><div class="icon">ðŸ…</div><div class="lbl">Admit Card Date</div><div class="val">${exam.admitCardDate}</div></div>
     </div>
 
@@ -265,14 +307,14 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
     ${center ? `
     <div class="section-title" style="margin-top:18px;">Exam Center</div>
     <div class="center-box">
-      <div class="city">ðŸ“ ${center.city}, Tamil Nadu</div>
+      <div class="city">📍 ${center.city}, Tamil Nadu</div>
       <div class="venue">${center.venue}</div>
       <div class="addr">${center.address} &nbsp;&bull;&nbsp; PIN: ${center.pincode}</div>
-      <div class="landmark">Landmark: ${center.landmark} &nbsp;&bull;&nbsp; ðŸ“ž ${center.phone}</div>
+      <div class="landmark">Landmark: ${center.landmark} &nbsp;&bull;&nbsp; 📞 ${center.phone}</div>
     </div>` : `
     <div class="section-title" style="margin-top:18px;">Exam Mode</div>
     <div class="center-box" style="background:#f0fdf4;border-color:#bbf7d0;">
-      <div class="city" style="color:#15803d;">ðŸŒ Online Exam</div>
+      <div class="city" style="color:#15803d;">🌐 Online Exam</div>
       <div class="venue" style="color:#166534;">Login via NaanMudhalvan Exam Portal</div>
       <div class="addr">https://exam.naanmudhalvan.tn.gov.in</div>
       <div class="landmark">Ensure stable internet. Use Chrome/Edge browser. No VPN.</div>
@@ -292,7 +334,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
     <!-- INSTRUCTIONS -->
     <div class="section-title" style="margin-top:18px;">Important Instructions</div>
     <div class="instructions">
-      <h4>âš ï¸ Read Carefully Before the Exam</h4>
+      <h4>⚠️ Read Carefully Before the Exam</h4>
       <ol>
         <li>Carry this Admit Card along with a valid Government Photo ID (Aadhaar Card / College ID) to the exam center.</li>
         <li>Report to the exam center at least <strong>30 minutes before</strong> the scheduled exam time.</li>
@@ -313,7 +355,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
       <div style="color:#e2e8f0;font-weight:700;margin-bottom:2px;">NaanMudhalvan Exam Cell</div>
       <div>exam@naanmudhalvan.tn.gov.in &nbsp;|&nbsp; 1800-425-5555 (Toll Free)</div>
     </div>
-    <div class="stamp">VERIFIED âœ“</div>
+    <div class="stamp">VERIFIED ✓</div>
   </div>
 
 </div>
@@ -401,7 +443,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                   { icon: <Calendar size={13} />, label: 'Exam Date',   val: exam.examDate },
                   { icon: <Clock size={13} />,    label: 'Exam Time',   val: exam.examTime },
                   { icon: <FileText size={13} />, label: 'Duration',    val: exam.duration },
-                  { icon: <Users size={13} />,    label: 'Questions',   val: `${exam.pattern?.totalQuestions ?? exam.totalQuestions ?? 100} Qs Â· ${exam.pattern?.totalMarks ?? exam.totalMarks ?? 100} Marks` },
+                  { icon: <Users size={13} />,    label: 'Questions',   val: `${exam.pattern?.totalQuestions ?? exam.totalQuestions ?? 100} Qs · ${exam.pattern?.totalMarks ?? exam.totalMarks ?? 100} Marks` },
                   { icon: <Shield size={13} />,   label: 'Negative Marking', val: (exam.pattern?.negativeMarking ?? exam.negativeMarking ?? 0) > 0 ? `âˆ’${exam.pattern?.negativeMarking ?? exam.negativeMarking} per wrong` : 'No negative marking' },
                   { icon: <Award size={13} />,    label: 'Certificate', val: exam.certificateOnPass ? 'On passing' : 'Participation only' },
                 ].map((item, i) => (
@@ -419,7 +461,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 {(exam.pattern?.sections ?? [{ name: 'General', questions: exam.totalQuestions ?? 100, marks: exam.totalMarks ?? 100 }]).map(sec => (
                   <div key={sec.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
                     <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{sec.name}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>{sec.questions} Qs Â· {sec.marks} Marks</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>{sec.questions} Qs · {sec.marks} Marks</span>
                   </div>
                 ))}
               </div>
@@ -437,7 +479,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
 
               <button className="btn btn-primary" onClick={() => setStep(exam.mode === 'offline' ? 'center' : 'form')}
                 style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 14, fontWeight: 700, marginTop: 16, background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color }}>
-                Continue â†’ {exam.mode === 'offline' ? 'Choose Exam Center' : 'Personal Details'}
+                Continue → {exam.mode === 'offline' ? 'Choose Exam Center' : 'Personal Details'}
               </button>
             </div>
           )}
@@ -457,7 +499,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 <button className="btn btn-ghost" onClick={() => setStep('details')} style={{ flex: 1, justifyContent: 'center' }}>â† Back</button>
                 <button className="btn btn-primary" disabled={!selectedCenter} onClick={() => setStep('form')}
                   style={{ flex: 2, justifyContent: 'center', background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color, opacity: !selectedCenter ? 0.5 : 1 }}>
-                  Continue â†’
+                  Continue →
                 </button>
               </div>
             </div>
@@ -470,7 +512,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 <div style={{ padding: '10px 14px', borderRadius: 11, background: 'rgba(124,58,237,0.07)', border: '1px solid rgba(124,58,237,0.2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Building2 size={14} color="#7c3aed" />
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{centerObj.city} â€” {centerObj.venue}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{centerObj.city} ”” {centerObj.venue}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{centerObj.address}</div>
                   </div>
                 </div>
@@ -516,7 +558,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                   disabled={!form.name || !form.email || !form.phone || !form.college || !form.branch || !form.year}
                   onClick={() => setStep('review')}
                   style={{ flex: 2, justifyContent: 'center', background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color, opacity: (!form.name || !form.email || !form.phone || !form.college || !form.branch || !form.year) ? 0.5 : 1 }}>
-                  Review Application â†’
+                  Review Application →
                 </button>
               </div>
             </div>
@@ -534,7 +576,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                   ['College', form.college],
                   ['Branch',  form.branch],
                   ['Year',    form.year],
-                  ['CGPA',    form.cgpa || 'â€”'],
+                  ['CGPA',    form.cgpa || '””'],
                 ].map(([label, val]) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
                     <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{label}</span>
@@ -544,7 +586,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 {centerObj && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0' }}>
                     <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Exam Center</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>{centerObj.city} â€” {centerObj.venue}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>{centerObj.city} ”” {centerObj.venue}</span>
                   </div>
                 )}
               </div>
@@ -562,7 +604,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 <button className="btn btn-ghost" onClick={() => setStep('form')} style={{ flex: 1, justifyContent: 'center' }}>â† Edit</button>
                 <button className="btn btn-primary" disabled={loading} onClick={handleSubmit}
                   style={{ flex: 2, justifyContent: 'center', fontSize: 14, fontWeight: 700, padding: '13px', background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color }}>
-                  {loading ? 'â³ Registeringâ€¦' : `âœ“ Confirm Registration â€” ${exam.price}`}
+                  {loading ? '⏳ Registering…' : `✓ Confirm Registration ”” ${exam.price}`}
                 </button>
               </div>
             </div>
@@ -573,7 +615,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
             <div style={{ padding: '48px 24px', textAlign: 'center' }}>
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 20 }}>
                 <div style={{ width: 88, height: 88, borderRadius: '50%', background: `${exam.color}18`, border: `2px solid ${exam.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: 40 }}>
-                  âœ…
+                  ✅
                 </div>
               </motion.div>
               <h3 className="font-display" style={{ fontWeight: 800, fontSize: 22, color: 'var(--text)', marginBottom: 8 }}>Registration Confirmed!</h3>
@@ -585,7 +627,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
               </p>
               {centerObj && (
                 <div style={{ padding: '12px 18px', borderRadius: 12, background: 'var(--bg-2)', border: '1px solid var(--border)', marginBottom: 20, textAlign: 'left' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>ðŸ“ Your Exam Center</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>📍 Your Exam Center</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 600 }}>{centerObj.venue}</div>
                   <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{centerObj.address}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{centerObj.landmark}</div>
@@ -593,9 +635,9 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
               )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
                 {[
-                  { icon: 'ðŸ“…', label: 'Exam Date',  val: exam.examDate },
-                  { icon: 'â°', label: 'Exam Time',  val: exam.examTime },
-                  { icon: 'ðŸŽŸï¸', label: 'Admit Card', val: exam.admitCardDate },
+                  { icon: '📅', label: 'Exam Date',  val: exam.examDate },
+                  { icon: '⏰', label: 'Exam Time',  val: exam.examTime },
+                  { icon: '🎟ï¸', label: 'Admit Card', val: exam.admitCardDate },
                 ].map(item => (
                   <div key={item.label} style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-2)', border: '1px solid var(--border)', textAlign: 'center' }}>
                     <div style={{ fontSize: 18, marginBottom: 4 }}>{item.icon}</div>
@@ -604,13 +646,84 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', position: 'relative' }}>
                 <button onClick={onClose} className="btn btn-ghost" style={{ padding: '10px 20px' }}>Close</button>
                 <button className="btn btn-primary"
                   style={{ padding: '10px 20px', background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color }}
                   onClick={downloadAdmitCard}>
                   <Download size={14} /> Download Admit Card
                 </button>
+
+                {/* Share button + dropdown */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowShare(s => !s)}
+                    style={{ padding: '10px 20px', borderRadius: 11, background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 12px rgba(16,185,129,0.3)' }}>
+                    <Share2 size={15} /> Share Ticket
+                  </button>
+
+                  <AnimatePresence>
+                    {showShare && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                        transition={{ duration: 0.18 }}
+                        style={{
+                          position: 'absolute', bottom: '110%', right: 0, zIndex: 999,
+                          background: 'var(--surface)', border: '1px solid var(--border)',
+                          borderRadius: 16, padding: 14, minWidth: 240,
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                        }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Share Your Ticket</div>
+
+                        {/* Native share (mobile) */}
+                        {'share' in navigator && (
+                          <button onClick={handleNativeShare}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: `${exam.color}12`, border: `1px solid ${exam.color}25`, color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', marginBottom: 7 }}>
+                            <Share2 size={15} style={{ color: exam.color }} />
+                            Share via Device
+                          </button>
+                        )}
+
+                        {/* WhatsApp */}
+                        <a href={whatsappUrl()} target="_blank" rel="noopener noreferrer"
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', textDecoration: 'none', marginBottom: 7 }}>
+                          <MessageCircle size={15} style={{ color: '#25d366' }} />
+                          Share on WhatsApp
+                        </a>
+
+                        {/* Twitter */}
+                        <a href={twitterUrl()} target="_blank" rel="noopener noreferrer"
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'rgba(29,161,242,0.1)', border: '1px solid rgba(29,161,242,0.25)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', textDecoration: 'none', marginBottom: 7 }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="#1da1f2"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L2.25 2.25h6.846l4.25 5.619 5.898-5.619Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                          Post on Twitter / X
+                        </a>
+
+                        {/* Copy text */}
+                        <button onClick={handleCopyText}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', marginBottom: 7 }}>
+                          <Copy size={15} style={{ color: '#f59e0b' }} />
+                          {copied ? 'Copied! ✅' : 'Copy Share Text'}
+                        </button>
+
+                        {/* Copy link */}
+                        <button onClick={handleCopyLink}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                          <Link size={15} style={{ color: '#7c3aed' }} />
+                          {copied ? <><CheckCheck size={13} style={{color:'#10b981'}}/>Copied!</> : 'Copy Page Link'}
+                        </button>
+
+                        {/* Close dropdown */}
+                        <button onClick={() => setShowShare(false)}
+                          style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}>
+                          <X size={13} />
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           )}
@@ -650,16 +763,16 @@ export default function ExamPortalPage() {
   }), [allExams, cat, modeF, priceF, dQ]);
 
   const stats = [
-    { label: 'Total Exams',     val: allExams.length,                              icon: 'ðŸ“‹', color: '#7c3aed' },
-    { label: 'Online',          val: allExams.filter(e=>e.mode==='online').length,  icon: 'ðŸŒ', color: '#10b981' },
-    { label: 'Offline Centers', val: TN_CENTERS.length,                            icon: 'ðŸ“', color: '#3b82f6' },
-    { label: 'Free Exams',      val: allExams.filter(e=>e.price==='Free').length,   icon: 'ðŸ†“', color: '#f59e0b' },
+    { label: 'Total Exams',     val: allExams.length,                              icon: '📋', color: '#7c3aed' },
+    { label: 'Online',          val: allExams.filter(e=>e.mode==='online').length,  icon: '🌐', color: '#10b981' },
+    { label: 'Offline Centers', val: TN_CENTERS.length,                            icon: '📍', color: '#3b82f6' },
+    { label: 'Free Exams',      val: allExams.filter(e=>e.price==='Free').length,   icon: '🄓', color: '#f59e0b' },
   ];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: 60 }}>
 
-      {/* â•â•â• HERO â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ╔╔╔ HERO ╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔ */}
       <div style={{ position: 'relative', overflow: 'hidden', padding: '52px 24px 44px', textAlign: 'center', background: 'linear-gradient(180deg, rgba(59,130,246,0.07) 0%, transparent 100%)', borderBottom: '1px solid var(--border)' }}>
         <div style={{ position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 700, height: 350, background: 'radial-gradient(ellipse, rgba(59,130,246,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
@@ -679,7 +792,7 @@ export default function ExamPortalPage() {
           <div style={{ position: 'relative', maxWidth: 500, margin: '0 auto' }}>
             <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
             <input className="inp" value={q} onChange={e => setQ(e.target.value)}
-              placeholder="Search exams, skills, categoriesâ€¦"
+              placeholder="Search exams, skills, categories…"
               style={{ paddingLeft: 46, paddingRight: q ? 40 : 16, fontSize: 14.5, height: 52, borderRadius: 14 }} />
             {q && <button onClick={() => setQ('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}><X size={15} /></button>}
           </div>
@@ -698,12 +811,12 @@ export default function ExamPortalPage() {
         </motion.div>
       </div>
 
-      {/* â•â•â• EXAM CENTERS MAP STRIP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ╔╔╔ EXAM CENTERS MAP STRIP ╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔ */}
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '14px 0', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, animation: 'marquee 30s linear infinite', width: 'max-content' }}>
           {[...TN_CENTERS, ...TN_CENTERS].map((c, i) => (
             <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 999, background: 'var(--bg-2)', border: '1px solid var(--border)', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', flexShrink: 0 }}>
-              <MapPin size={11} color="#3b82f6" /> {c.city} â€” {c.venue}
+              <MapPin size={11} color="#3b82f6" /> {c.city} ”” {c.venue}
             </span>
           ))}
         </div>
@@ -711,7 +824,7 @@ export default function ExamPortalPage() {
 
       <div style={{ maxWidth: 1340, margin: '0 auto', padding: '32px 24px 80px' }}>
 
-        {/* â•â•â• FILTERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ╔╔╔ FILTERS ╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔ */}
         <div style={{ marginBottom: 28 }}>
           {/* Category */}
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 12, paddingBottom: 4 }}>
@@ -729,7 +842,7 @@ export default function ExamPortalPage() {
               {(['all', 'online', 'offline', 'hybrid'] as const).map(m => (
                 <button key={m} onClick={() => setModeF(m)}
                   style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: `1.5px solid ${modeF === m ? 'var(--accent)' : 'var(--border)'}`, background: modeF === m ? 'rgba(124,58,237,0.1)' : 'var(--surface)', color: modeF === m ? 'var(--accent)' : 'var(--text-2)', transition: 'all 0.18s' }}>
-                  {m === 'all' ? 'ðŸŒ All Modes' : m === 'online' ? <><Monitor size={12} /> Online</> : m === 'offline' ? <><Building2 size={12} /> Offline</> : <><Layers size={12} /> Hybrid</>}
+                  {m === 'all' ? '🌐 All Modes' : m === 'online' ? <><Monitor size={12} /> Online</> : m === 'offline' ? <><Building2 size={12} /> Offline</> : <><Layers size={12} /> Hybrid</>}
                 </button>
               ))}
             </div>
@@ -737,7 +850,7 @@ export default function ExamPortalPage() {
               {(['all', 'free', 'paid'] as const).map(p => (
                 <button key={p} onClick={() => setPriceF(p)}
                   style={{ padding: '7px 13px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: `1.5px solid ${priceF === p ? 'var(--accent)' : 'var(--border)'}`, background: priceF === p ? 'rgba(124,58,237,0.1)' : 'var(--surface)', color: priceF === p ? 'var(--accent)' : 'var(--text-2)', transition: 'all 0.18s' }}>
-                  {p === 'all' ? 'All Prices' : p === 'free' ? 'ðŸ†“ Free' : 'ðŸ’³ Paid'}
+                  {p === 'all' ? 'All Prices' : p === 'free' ? '🄓 Free' : 'ðŸ’³ Paid'}
                 </button>
               ))}
             </div>
@@ -747,15 +860,15 @@ export default function ExamPortalPage() {
         {/* Results count */}
         <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>
           <span style={{ fontWeight: 700, color: 'var(--text)' }}>{filtered.length}</span> exam{filtered.length !== 1 ? 's' : ''} available
-          {dQ && <span> Â· matching "<strong style={{ color: 'var(--accent)' }}>{dQ}</strong>"</span>}
+          {dQ && <span> · matching "<strong style={{ color: 'var(--accent)' }}>{dQ}</strong>"</span>}
         </p>
 
-        {/* â•â•â• EXAM CARDS GRID â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ╔╔╔ EXAM CARDS GRID ╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔ */}
         <AnimatePresence mode="sync">
           {filtered.length === 0 ? (
             <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               style={{ textAlign: 'center', padding: '80px 20px' }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>ðŸ”</div>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>🔍</div>
               <h3 className="font-display" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>No exams found</h3>
               <p style={{ color: 'var(--text-2)', marginBottom: 20 }}>Try different filters or search terms</p>
               <button onClick={() => { setCat('all'); setModeF('all'); setPriceF('all'); setQ(''); }} className="btn btn-primary btn-sm">Clear Filters</button>
@@ -811,7 +924,7 @@ export default function ExamPortalPage() {
                         {[
                           { icon: <Calendar size={11} />, label: 'Exam Date', val: exam.examDate },
                           { icon: <Clock size={11} />,    label: 'Duration',  val: exam.duration },
-                          { icon: <FileText size={11} />, label: 'Questions', val: `${exam.pattern.totalQuestions} Qs Â· ${exam.pattern.totalMarks}M` },
+                          { icon: <FileText size={11} />, label: 'Questions', val: `${exam.pattern?.totalQuestions ?? exam.totalQuestions ?? 100} Qs · ${exam.pattern?.totalMarks ?? exam.totalMarks ?? 100}M` },
                           { icon: <Globe size={11} />,    label: 'Language',  val: exam.languages.join(', ') },
                         ].map((it, idx) => (
                           <div key={idx} style={{ padding: '8px 10px', borderRadius: 9, background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
@@ -827,10 +940,10 @@ export default function ExamPortalPage() {
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: DIFF_COLOR[exam.difficulty] + '18', color: DIFF_COLOR[exam.difficulty] }}>
                           {exam.difficulty}
                         </span>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: exam.pattern.negativeMarking > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: exam.pattern.negativeMarking > 0 ? '#ef4444' : '#10b981' }}>
-                          {exam.pattern.negativeMarking > 0 ? `âš  âˆ’${exam.pattern.negativeMarking} Negative` : 'âœ“ No Negative'}
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: (exam.pattern?.negativeMarking ?? 0) > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: (exam.pattern?.negativeMarking ?? 0) > 0 ? '#ef4444' : '#10b981' }}>
+                          {(exam.pattern?.negativeMarking ?? 0) > 0 ? `⚠️ −${exam.pattern?.negativeMarking} Negative` : '✅ No Negative'}
                         </span>
-                        {exam.certificateOnPass && <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>ðŸ… Certificate</span>}
+                        {exam.certificateOnPass && <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>🏅 Certificate</span>}
                       </div>
 
                       {/* Offline centers preview */}
@@ -887,7 +1000,7 @@ export default function ExamPortalPage() {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 1 }}>Reg. closes</div>
                           <div style={{ fontSize: 11.5, fontWeight: 700, color: deadline <= 3 ? '#ef4444' : deadline <= 7 ? '#f59e0b' : '#10b981' }}>
-                            {deadline < 0 ? 'Closed' : deadline === 0 ? 'Last Day!' : `${deadline}d left â€” ${exam.registrationDeadline}`}
+                            {deadline < 0 ? 'Closed' : deadline === 0 ? 'Last Day!' : `${deadline}d left ”” ${exam.registrationDeadline}`}
                           </div>
                         </div>
                         {isReg ? (
@@ -899,7 +1012,7 @@ export default function ExamPortalPage() {
                             onClick={() => setSelected(exam)}
                             disabled={exam.status === 'closed'}
                             style={{ padding: '9px 18px', fontSize: 13, fontWeight: 700, background: `linear-gradient(135deg, ${examColor}, ${examColor}cc)`, borderColor: examColor, opacity: exam.status === 'closed' ? 0.5 : 1, cursor: exam.status === 'closed' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
-                            {exam.price === 'Free' ? 'ðŸ†“ Register' : `Register Â· ${exam.price}`}
+                            {exam.price === 'Free' ? '🄓 Register' : `Register · ${exam.price}`}
                           </button>
                         )}
                       </div>
@@ -912,7 +1025,7 @@ export default function ExamPortalPage() {
         </AnimatePresence>
       </div>
 
-      {/* â•â•â• REGISTRATION MODAL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ╔╔╔ REGISTRATION MODAL ╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔╔ */}
       <AnimatePresence>
         {selected && <ExamRegModal exam={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>

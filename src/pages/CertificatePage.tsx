@@ -1,9 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Award, Star, CheckCircle, Share2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, Award, Star, CheckCircle, Share2, Printer, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
-// ── Types ──────────────────────────────────────────────────
 interface CertTemplate {
   id: string;
   name: string;
@@ -15,531 +14,471 @@ interface CertTemplate {
   bgStyle: string;
   borderStyle: string;
   description: string;
+  style: 'royal' | 'neon' | 'gold' | 'minimal' | 'dark' | 'holographic';
 }
 
-// ── All Certificate Templates ──────────────────────────────
 const TEMPLATES: CertTemplate[] = [
-  // ── INTERNSHIP TEMPLATES ──
+  // ── INTERNSHIP ──
   {
-    id: 'tcs-intern',
-    name: 'TCS Internship Certificate',
-    type: 'internship',
-    company: 'Tata Consultancy Services',
-    companyDomain: 'tcs.com',
-    primaryColor: '#1a56db',
-    accentColor: '#3b82f6',
-    bgStyle: 'linear-gradient(135deg, #0c1445 0%, #1a237e 40%, #0d47a1 100%)',
-    borderStyle: '#1a56db',
-    description: 'Official internship completion certificate from TCS',
+    id: 'tcs-royal', name: 'TCS – Royal Blue', type: 'internship',
+    company: 'Tata Consultancy Services', companyDomain: 'tcs.com',
+    primaryColor: '#1a56db', accentColor: '#60a5fa',
+    bgStyle: 'linear-gradient(135deg, #020818 0%, #0a1628 50%, #071230 100%)',
+    borderStyle: '#1a56db', description: 'Internship completion – TCS', style: 'royal',
   },
   {
-    id: 'zoho-intern',
-    name: 'Zoho Internship Certificate',
-    type: 'internship',
-    company: 'Zoho Corporation',
-    companyDomain: 'zoho.com',
-    primaryColor: '#e42527',
-    accentColor: '#ef4444',
-    bgStyle: 'linear-gradient(135deg, #1a0000 0%, #3b0000 40%, #1a0505 100%)',
-    borderStyle: '#e42527',
-    description: 'Software development internship at Zoho Corp',
+    id: 'zoho-neon', name: 'Zoho – Neon Crimson', type: 'internship',
+    company: 'Zoho Corporation', companyDomain: 'zoho.com',
+    primaryColor: '#e42527', accentColor: '#fb7185',
+    bgStyle: 'linear-gradient(135deg, #0d0005 0%, #1e0010 50%, #0a0003 100%)',
+    borderStyle: '#e42527', description: 'Software development internship – Zoho', style: 'neon',
   },
   {
-    id: 'infosys-intern',
-    name: 'Infosys Internship Certificate',
-    type: 'internship',
-    company: 'Infosys Limited',
-    companyDomain: 'infosys.com',
-    primaryColor: '#007cc3',
-    accentColor: '#0ea5e9',
-    bgStyle: 'linear-gradient(135deg, #00111f 0%, #003366 50%, #001f3f 100%)',
-    borderStyle: '#007cc3',
-    description: 'Technology internship certification from Infosys',
+    id: 'freshworks-holographic', name: 'Freshworks – Holographic', type: 'internship',
+    company: 'Freshworks Inc.', companyDomain: 'freshworks.com',
+    primaryColor: '#29b5e8', accentColor: '#a78bfa',
+    bgStyle: 'linear-gradient(135deg, #020b18 0%, #06101f 40%, #08051a 100%)',
+    borderStyle: '#29b5e8', description: 'Engineering internship – Freshworks', style: 'holographic',
   },
   {
-    id: 'freshworks-intern',
-    name: 'Freshworks Internship Certificate',
-    type: 'internship',
-    company: 'Freshworks Inc.',
-    companyDomain: 'freshworks.com',
-    primaryColor: '#29b5e8',
-    accentColor: '#06b6d4',
-    bgStyle: 'linear-gradient(135deg, #001a24 0%, #003d52 50%, #002233 100%)',
-    borderStyle: '#29b5e8',
-    description: 'SaaS product internship at Freshworks',
+    id: 'razorpay-dark', name: 'Razorpay – Midnight', type: 'internship',
+    company: 'Razorpay', companyDomain: 'razorpay.com',
+    primaryColor: '#3395ff', accentColor: '#6ee7b7',
+    bgStyle: 'linear-gradient(135deg, #040d1a 0%, #071422 60%, #030c17 100%)',
+    borderStyle: '#3395ff', description: 'Fintech internship – Razorpay', style: 'dark',
   },
   {
-    id: 'wipro-intern',
-    name: 'Wipro Internship Certificate',
-    type: 'internship',
-    company: 'Wipro Technologies',
-    companyDomain: 'wipro.com',
-    primaryColor: '#7b2d8b',
-    accentColor: '#a855f7',
-    bgStyle: 'linear-gradient(135deg, #0d0014 0%, #2d0045 50%, #1a0028 100%)',
-    borderStyle: '#7b2d8b',
-    description: 'Digital transformation internship at Wipro',
+    id: 'google-gold', name: 'Google – Prestige Gold', type: 'internship',
+    company: 'Google India', companyDomain: 'google.com',
+    primaryColor: '#f59e0b', accentColor: '#fde68a',
+    bgStyle: 'linear-gradient(135deg, #0d0800 0%, #1a1000 50%, #0a0700 100%)',
+    borderStyle: '#f59e0b', description: 'Software engineering internship – Google', style: 'gold',
+  },
+  // ── COURSE ──
+  {
+    id: 'nm-course-royal', name: 'NM – Royal Purple', type: 'course',
+    company: 'Naan Mudhalvan', companyDomain: 'naanmudhalvan.tn.gov.in',
+    primaryColor: '#7c3aed', accentColor: '#c4b5fd',
+    bgStyle: 'linear-gradient(135deg, #060312 0%, #0e0620 50%, #070114 100%)',
+    borderStyle: '#7c3aed', description: 'Course completion – NaanMudhalvan', style: 'royal',
   },
   {
-    id: 'google-intern',
-    name: 'Google Internship Certificate',
-    type: 'internship',
-    company: 'Google LLC',
-    companyDomain: 'google.com',
-    primaryColor: '#4285f4',
-    accentColor: '#34a853',
-    bgStyle: 'linear-gradient(135deg, #0a0f1a 0%, #1a2744 50%, #0d1628 100%)',
-    borderStyle: '#4285f4',
-    description: 'Software engineering internship at Google',
-  },
-  // ── COURSE COMPLETION TEMPLATES ──
-  {
-    id: 'course-nm-gold',
-    name: 'NM Course Certificate — Gold',
-    type: 'course',
-    company: 'NaanMudhalvan Platform',
-    companyDomain: 'naanmudhalvan.tn.gov.in',
-    primaryColor: '#f59e0b',
-    accentColor: '#fbbf24',
-    bgStyle: 'linear-gradient(135deg, #0c0800 0%, #1a1100 40%, #0f0c00 100%)',
-    borderStyle: '#f59e0b',
-    description: 'Government of Tamil Nadu course completion',
+    id: 'infosys-course-minimal', name: 'Infosys – Minimal', type: 'course',
+    company: 'Infosys Limited', companyDomain: 'infosys.com',
+    primaryColor: '#007cc3', accentColor: '#38bdf8',
+    bgStyle: 'linear-gradient(135deg, #020d1a 0%, #04162b 50%, #020d1a 100%)',
+    borderStyle: '#007cc3', description: 'Technology course – Infosys', style: 'minimal',
   },
   {
-    id: 'course-violet',
-    name: 'NM Course Certificate — Violet',
-    type: 'course',
-    company: 'NaanMudhalvan Platform',
-    companyDomain: 'naanmudhalvan.tn.gov.in',
-    primaryColor: '#7c3aed',
-    accentColor: '#a78bfa',
-    bgStyle: 'linear-gradient(135deg, #06000f 0%, #1a0045 50%, #0d0028 100%)',
-    borderStyle: '#7c3aed',
-    description: 'Advanced skill development certification',
+    id: 'zoho-course-neon', name: 'Zoho – Emerald Neon', type: 'course',
+    company: 'Zoho Corporation', companyDomain: 'zoho.com',
+    primaryColor: '#10b981', accentColor: '#6ee7b7',
+    bgStyle: 'linear-gradient(135deg, #010d08 0%, #031a10 50%, #010d08 100%)',
+    borderStyle: '#10b981', description: 'Development course – Zoho', style: 'neon',
+  },
+  // ── EXCELLENCE ──
+  {
+    id: 'nm-excellence-gold', name: 'NM – Excellence Gold', type: 'excellence',
+    company: 'Naan Mudhalvan', companyDomain: 'naanmudhalvan.tn.gov.in',
+    primaryColor: '#f59e0b', accentColor: '#fbbf24',
+    bgStyle: 'linear-gradient(135deg, #0d0800 0%, #1c1000 60%, #0d0800 100%)',
+    borderStyle: '#f59e0b', description: 'Excellence award – NaanMudhalvan', style: 'gold',
   },
   {
-    id: 'course-green',
-    name: 'NM Course Certificate — Emerald',
-    type: 'course',
-    company: 'NaanMudhalvan Platform',
-    companyDomain: 'naanmudhalvan.tn.gov.in',
-    primaryColor: '#10b981',
-    accentColor: '#34d399',
-    bgStyle: 'linear-gradient(135deg, #00100a 0%, #003322 50%, #001a12 100%)',
-    borderStyle: '#10b981',
-    description: 'Industry-ready skills certification',
-  },
-  // ── EXCELLENCE AWARD ──
-  {
-    id: 'excellence-navy',
-    name: 'Certificate of Excellence',
-    type: 'excellence',
-    company: 'NaanMudhalvan Platform',
-    companyDomain: 'naanmudhalvan.tn.gov.in',
-    primaryColor: '#f59e0b',
-    accentColor: '#fbbf24',
-    bgStyle: 'linear-gradient(135deg, #030b1a 0%, #0a1628 50%, #050d1e 100%)',
-    borderStyle: '#f59e0b',
-    description: 'Premium certificate for top performers',
+    id: 'tamilnadu-gov', name: 'TN Govt – Official', type: 'excellence',
+    company: 'Government of Tamil Nadu', companyDomain: 'tn.gov.in',
+    primaryColor: '#e67e22', accentColor: '#f0a500',
+    bgStyle: 'linear-gradient(135deg, #0d0600 0%, #1c0d00 60%, #0d0600 100%)',
+    borderStyle: '#e67e22', description: 'Government excellence recognition', style: 'gold',
   },
 ];
 
-const TYPE_TABS = [
-  { id: 'all',         label: 'All',              icon: '🏅' },
-  { id: 'internship',  label: 'Internship',        icon: '💼' },
-  { id: 'course',      label: 'Course Completion', icon: '📚' },
-  { id: 'excellence',  label: 'Excellence Award',  icon: '⭐' },
-];
-
-// ── CERTIFICATE RENDERER ───────────────────────────────────
-function CertificateCard({
-  template,
-  studentName,
-  courseName,
-  date,
-  credentialId,
-}: {
-  template: CertTemplate;
-  studentName: string;
-  courseName: string;
-  date: string;
-  credentialId: string;
+// ── Certificate Render ──────────────────────────────────────────────────────
+function CertificateCard({ template, studentName, courseName, date, credentialId }: {
+  template: CertTemplate; studentName: string; courseName: string; date: string; credentialId: string;
 }) {
-  const logoUrl = `https://logo.clearbit.com/${template.companyDomain}`;
   const [logoErr, setLogoErr] = useState(false);
   const p = template.primaryColor;
   const a = template.accentColor;
+  const logoUrl = `https://logo.clearbit.com/${template.companyDomain}`;
+
+  const renderStyleElements = () => {
+    switch (template.style) {
+      case 'holographic':
+        return (
+          <>
+            {/* Holographic shimmer overlay */}
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.08,
+              background: 'linear-gradient(135deg, #ff0080 0%, #7928ca 20%, #0070f3 40%, #00dfd8 60%, #ff0080 80%, #7928ca 100%)',
+              backgroundSize: '400% 400%',
+            }} />
+            {/* Grid lines */}
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.04,
+              backgroundImage: `linear-gradient(${p}40 1px, transparent 1px), linear-gradient(90deg, ${p}40 1px, transparent 1px)`,
+              backgroundSize: '20px 20px',
+            }} />
+          </>
+        );
+      case 'neon':
+        return (
+          <>
+            {/* Neon glow rays */}
+            <div style={{ position: 'absolute', top: '-30%', left: '50%', transform: 'translateX(-50%)', width: '120%', height: '60%', background: `radial-gradient(ellipse, ${p}18 0%, transparent 70%)`, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '-20%', left: '50%', transform: 'translateX(-50%)', width: '80%', height: '40%', background: `radial-gradient(ellipse, ${a}12 0%, transparent 70%)`, pointerEvents: 'none' }} />
+            {/* Scanlines */}
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.03,
+              backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0px, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 4px)' }} />
+          </>
+        );
+      case 'gold':
+        return (
+          <>
+            {/* Gold shimmer */}
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.06,
+              backgroundImage: `repeating-linear-gradient(45deg, ${p} 0, ${p} 1px, transparent 0, transparent 12px)` }} />
+            {/* Corner flourishes */}
+            {[[0,0,'0 0'], [0,1,'0 0'], [1,0,'0 0'], [1,1,'0 0']].map((_, qi) => (
+              <div key={qi} style={{
+                position: 'absolute', width: 60, height: 60, pointerEvents: 'none',
+                top: qi < 2 ? 12 : 'auto', bottom: qi >= 2 ? 12 : 'auto',
+                left: qi % 2 === 0 ? 12 : 'auto', right: qi % 2 === 1 ? 12 : 'auto',
+                border: `2px solid ${p}50`, borderRadius: 4,
+              }} />
+            ))}
+          </>
+        );
+      case 'royal':
+        return (
+          <>
+            {/* Royal center radial */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '80%', height: '80%', background: `radial-gradient(ellipse, ${p}0a 0%, transparent 70%)`, pointerEvents: 'none' }} />
+            {/* Ornate corners */}
+            {[0,1,2,3].map(qi => (
+              <svg key={qi} style={{
+                position: 'absolute', width: 70, height: 70, pointerEvents: 'none',
+                top: qi < 2 ? 8 : 'auto', bottom: qi >= 2 ? 8 : 'auto',
+                left: qi % 2 === 0 ? 8 : 'auto', right: qi % 2 === 1 ? 8 : 'auto',
+                transform: `rotate(${qi*90}deg)`, opacity: 0.6,
+              }} viewBox="0 0 70 70">
+                <path d="M4,4 L28,4 M4,4 L4,28" stroke={p} strokeWidth="1.5" fill="none"/>
+                <path d="M4,4 L12,4 L12,12 L4,12 Z" fill={`${p}30`}/>
+                <circle cx="4" cy="4" r="2.5" fill={a}/>
+              </svg>
+            ))}
+          </>
+        );
+      case 'minimal':
+        return (
+          <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, transform: 'translateX(-50%)', background: `linear-gradient(180deg, transparent, ${p}30, transparent)`, pointerEvents: 'none' }} />
+        );
+      case 'dark':
+      default:
+        return (
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.04,
+            backgroundImage: `repeating-linear-gradient(60deg, ${p} 0, ${p} 1px, transparent 0, transparent 18px)` }} />
+        );
+    }
+  };
 
   return (
     <div style={{
-      width: '100%', aspectRatio: '1.414 / 1',
-      background: template.bgStyle,
-      borderRadius: 16, overflow: 'hidden',
-      position: 'relative', fontFamily: 'Georgia, serif',
+      width: '100%', aspectRatio: '1.414 / 1', position: 'relative', overflow: 'hidden',
+      borderRadius: 16, background: template.bgStyle,
+      border: `1.5px solid ${p}50`,
+      boxShadow: `0 0 60px ${p}30, 0 24px 80px rgba(0,0,0,0.7), inset 0 0 60px rgba(0,0,0,0.4)`,
     }}>
-      {/* ── Outer decorative border ── */}
-      <div style={{ position: 'absolute', inset: 12, border: `2px solid ${p}40`, borderRadius: 10, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', inset: 18, border: `1px solid ${p}20`, borderRadius: 7, pointerEvents: 'none' }} />
+      {renderStyleElements()}
 
-      {/* ── Corner ornaments ── */}
-      {[
-        { top: 12, left: 12, rotate: '0deg' },
-        { top: 12, right: 12, rotate: '90deg' },
-        { bottom: 12, right: 12, rotate: '180deg' },
-        { bottom: 12, left: 12, rotate: '270deg' },
-      ].map((pos, i) => (
-        <div key={i} style={{
-          position: 'absolute', width: 48, height: 48,
-          ...pos as any,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: `rotate(${pos.rotate})` }}>
-            <path d="M2 2 L2 18 L6 18 L6 6 L18 6 L18 2 Z" fill={`${p}70`} />
-            <path d="M2 2 L2 8 L8 2 Z" fill={p} opacity="0.9" />
-            <circle cx="20" cy="20" r="2" fill={`${a}60`} />
-          </svg>
-        </div>
-      ))}
+      {/* Outer border frame */}
+      <div style={{ position: 'absolute', inset: 14, border: `1px solid ${p}35`, borderRadius: 10, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 18, border: `0.5px solid ${p}18`, borderRadius: 8, pointerEvents: 'none' }} />
 
-      {/* ── Top accent line ── */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, transparent, ${p}, ${a}, ${p}, transparent)` }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, transparent, ${p}, ${a}, ${p}, transparent)` }} />
+      {/* Top & Bottom accent bars */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: `linear-gradient(90deg, transparent 0%, ${p} 30%, ${a} 50%, ${p} 70%, transparent 100%)` }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 5, background: `linear-gradient(90deg, transparent 0%, ${p} 30%, ${a} 50%, ${p} 70%, transparent 100%)` }} />
 
-      {/* ── Content ── */}
-      <div style={{ position: 'absolute', inset: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Content */}
+      <div style={{ position: 'absolute', inset: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between' }}>
 
         {/* Header */}
         <div style={{ textAlign: 'center', width: '100%' }}>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
             {!logoErr ? (
-              <div style={{ width: 36, height: 36, background: '#fff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 3 }}>
-                <img src={logoUrl} alt={template.company} width={28} height={28} style={{ objectFit: 'contain' }} onError={() => setLogoErr(true)} />
+              <div style={{ width: 32, height: 32, background: '#fff', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 3, boxShadow: `0 0 10px ${p}50` }}>
+                <img src={logoUrl} alt={template.company} width={26} height={26} style={{ objectFit: 'contain' }} onError={() => setLogoErr(true)} />
               </div>
             ) : (
-              <div style={{ width: 36, height: 36, background: `${p}20`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Award size={18} color={p} />
+              <div style={{ width: 32, height: 32, background: `${p}20`, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${p}40` }}>
+                <Award size={16} color={p} />
               </div>
             )}
-            <span style={{ fontSize: 11, color: `${p}cc`, fontFamily: 'Inter, sans-serif', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 10, color: `${p}cc`, fontFamily: 'Inter, sans-serif', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
               {template.company}
             </span>
           </div>
 
-          {/* Title */}
-          <div style={{ fontSize: 9, letterSpacing: '0.25em', textTransform: 'uppercase', color: `${a}99`, fontFamily: 'Inter, sans-serif', marginBottom: 4 }}>
-            {template.type === 'internship' ? 'This certifies that' : template.type === 'course' ? 'Certificate of Completion' : 'Certificate of Excellence'}
+          {/* Certificate type label */}
+          <div style={{
+            display: 'inline-block', fontSize: 7.5, letterSpacing: '0.3em', textTransform: 'uppercase',
+            color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 700,
+            background: `linear-gradient(90deg, ${p}, ${a})`,
+            padding: '4px 16px', borderRadius: 99, marginBottom: 8,
+            boxShadow: `0 0 16px ${p}60`,
+          }}>
+            {template.type === 'internship' ? '✦ Certificate of Internship ✦' :
+             template.type === 'course'     ? '✦ Certificate of Completion ✦' :
+                                              '✦ Certificate of Excellence ✦'}
           </div>
-          {template.type === 'internship' && (
-            <div style={{ fontSize: 8, letterSpacing: '0.2em', textTransform: 'uppercase', color: `${p}80`, fontFamily: 'Inter, sans-serif' }}>
-              Internship Completion Certificate
-            </div>
-          )}
 
-          {/* Divider */}
-          <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${p}50, transparent)`, margin: '8px auto', width: '70%' }} />
+          <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${p}60, ${a}60, ${p}60, transparent)`, width: '80%', margin: '6px auto' }} />
         </div>
 
         {/* Student Name */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 7, letterSpacing: '0.18em', textTransform: 'uppercase', color: `${a}80`, fontFamily: 'Inter, sans-serif', marginBottom: 4 }}>
+          <div style={{ fontSize: 7, letterSpacing: '0.22em', textTransform: 'uppercase', color: `${a}90`, fontFamily: 'Inter, sans-serif', marginBottom: 5 }}>
             Proudly Awarded To
           </div>
           <div style={{
-            fontSize: 'clamp(18px, 4vw, 28px)',
-            fontWeight: 700,
-            color: '#ffffff',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.1,
-            textShadow: `0 0 20px ${p}60`,
+            fontSize: 'clamp(20px, 4.5vw, 32px)', fontWeight: 800, color: '#ffffff',
+            letterSpacing: '-0.02em', lineHeight: 1.1, fontFamily: 'Georgia, serif',
+            textShadow: `0 0 30px ${p}80, 0 2px 0 rgba(0,0,0,0.5)`,
           }}>
             {studentName || 'Student Name'}
           </div>
-          <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${a}60, transparent)`, margin: '6px auto', width: '50%' }} />
+          <div style={{ height: 1.5, background: `linear-gradient(90deg, transparent, ${a}80, transparent)`, width: '60%', margin: '8px auto' }} />
         </div>
 
-        {/* Course/Role */}
-        <div style={{ textAlign: 'center', padding: '0 8%' }}>
-          {template.type === 'internship' ? (
-            <>
-              <div style={{ fontSize: 6.5, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${p}80`, fontFamily: 'Inter, sans-serif', marginBottom: 3 }}>
-                For successfully completing the internship program in
-              </div>
-              <div style={{ fontSize: 'clamp(11px, 2.5vw, 16px)', fontWeight: 600, color: a, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>
-                {courseName || 'Software Development'}
-              </div>
-            </>
-          ) : template.type === 'course' ? (
-            <>
-              <div style={{ fontSize: 6.5, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${p}80`, fontFamily: 'Inter, sans-serif', marginBottom: 3 }}>
-                For successfully completing
-              </div>
-              <div style={{ fontSize: 'clamp(11px, 2.5vw, 16px)', fontWeight: 600, color: a, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>
-                {courseName || 'Course Title'}
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 6.5, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${p}80`, fontFamily: 'Inter, sans-serif', marginBottom: 3 }}>
-                In recognition of outstanding excellence in
-              </div>
-              <div style={{ fontSize: 'clamp(11px, 2.5vw, 16px)', fontWeight: 600, color: a, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>
-                {courseName || 'Academic Achievement'}
-              </div>
-            </>
-          )}
-          <div style={{ fontSize: 6.5, color: `${p}70`, marginTop: 4, fontFamily: 'Inter, sans-serif' }}>
-            This certificate recognises outstanding dedication and skill demonstrated throughout the programme.
+        {/* Course / Role */}
+        <div style={{ textAlign: 'center', padding: '0 10%' }}>
+          <div style={{ fontSize: 6.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: `${p}80`, fontFamily: 'Inter, sans-serif', marginBottom: 4 }}>
+            {template.type === 'internship' ? 'For Successfully Completing the Internship Program in' :
+             template.type === 'course'     ? 'For Successfully Completing' :
+                                              'In Recognition of Outstanding Excellence in'}
+          </div>
+          <div style={{ fontSize: 'clamp(12px, 2.8vw, 17px)', fontWeight: 700, color: a, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>
+            {courseName || 'Software Development'}
+          </div>
+          <div style={{ fontSize: 6.5, color: `${p}70`, marginTop: 5, fontFamily: 'Inter, sans-serif', lineHeight: 1.6 }}>
+            This certificate recognises outstanding dedication, skill, and perseverance demonstrated throughout the programme.
           </div>
         </div>
 
-        {/* Footer — Seal + Signatures + Date */}
+        {/* Footer */}
         <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
           {/* Sig 1 */}
           <div style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ height: 1, background: `${p}50`, marginBottom: 3, width: '80%', margin: '0 auto 3px' }} />
-            <div style={{ fontSize: 6.5, color: `${p}aa`, fontFamily: 'Inter, sans-serif', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Programme Director</div>
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: `${a}cc`, marginBottom: 3, fontStyle: 'italic' }}>Authorised</div>
+            <div style={{ height: 1, background: `${p}50`, width: '80%', margin: '0 auto 3px' }} />
+            <div style={{ fontSize: 6, color: `${p}aa`, fontFamily: 'Inter, sans-serif', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Programme Director</div>
           </div>
 
-          {/* Seal */}
+          {/* Central Seal */}
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
             <div style={{
-              width: 52, height: 52, borderRadius: '50%',
+              width: 58, height: 58, borderRadius: '50%',
               border: `2.5px solid ${p}`,
-              background: `radial-gradient(circle, ${p}20, transparent)`,
+              background: `radial-gradient(circle, ${p}25 0%, transparent 70%)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 0 16px ${p}50`,
-              margin: '0 auto 3px',
+              boxShadow: `0 0 20px ${p}60, inset 0 0 14px ${p}20`,
+              margin: '0 auto 4px',
             }}>
-              <Award size={22} color={p} />
+              <Award size={24} color={p} />
             </div>
-            <div style={{ fontSize: 6, color: `${a}90`, fontFamily: 'Inter, sans-serif', letterSpacing: '0.06em' }}>OFFICIAL SEAL</div>
+            <div style={{ fontSize: 5.5, color: `${a}90`, fontFamily: 'Inter, sans-serif', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Official Seal</div>
           </div>
 
           {/* Sig 2 + Date */}
           <div style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ height: 1, background: `${p}50`, marginBottom: 3, width: '80%', margin: '0 auto 3px' }} />
-            <div style={{ fontSize: 6.5, color: `${p}aa`, fontFamily: 'Inter, sans-serif', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Issue Date: {date || 'Oct 2026'}</div>
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: `${a}cc`, marginBottom: 3, fontStyle: 'italic' }}>Certified</div>
+            <div style={{ height: 1, background: `${p}50`, width: '80%', margin: '0 auto 3px' }} />
+            <div style={{ fontSize: 6, color: `${p}aa`, fontFamily: 'Inter, sans-serif', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Date: {date || 'Oct 2026'}
+            </div>
           </div>
         </div>
 
         {/* Credential ID */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 6, color: `${p}60`, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>
-            Credential ID: {credentialId || 'NM-2026-XXXX-YYYY'}
+          <div style={{ fontSize: 5.5, color: `${p}60`, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.12em' }}>
+            Credential ID: {credentialId || 'NM-2026-XXXX-YYYY'} · Verify at naanmudhalvan.tn.gov.in
           </div>
         </div>
       </div>
-
-      {/* Watermark background pattern */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.03,
-        backgroundImage: `repeating-linear-gradient(45deg, ${p} 0, ${p} 1px, transparent 0, transparent 50%)`,
-        backgroundSize: '14px 14px',
-      }} />
     </div>
   );
 }
 
-// ── MAIN PAGE ──────────────────────────────────────────────
+// ── MAIN PAGE ──────────────────────────────────────────────────────────────
 export default function CertificatePage() {
   const { user } = useAuth();
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [selected,   setSelected]   = useState<CertTemplate>(TEMPLATES[0]);
-  const [studentName, setStudentName] = useState(user?.name || 'Your Name');
-  const [courseName,  setCourseName]  = useState('Full Stack Web Development with React & Node.js');
-  const [issueDate,   setIssueDate]   = useState('October 2026');
-  const [credId,      setCredId]      = useState(`NM-${new Date().getFullYear()}-${Math.floor(Math.random()*9000+1000)}-${Math.floor(Math.random()*9000+1000)}`);
-  const certRef = useRef<HTMLDivElement>(null);
+  const [typeFilter,   setTypeFilter]   = useState<'all'|'internship'|'course'|'excellence'>('all');
+  const [selected,     setSelected]     = useState<CertTemplate>(TEMPLATES[0]);
+  const [studentName,  setStudentName]  = useState(user?.name || 'Your Name');
+  const [courseName,   setCourseName]   = useState('Full Stack Web Development with React & Node.js');
+  const [date,         setDate]         = useState(new Date().toLocaleDateString('en-IN',{month:'long', year:'numeric'}));
+  const [credentialId, setCredentialId] = useState(`NM-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`);
+  const [copied,       setCopied]       = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const filtered = typeFilter === 'all' ? TEMPLATES : TEMPLATES.filter(t => t.type === typeFilter);
 
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
+    if (!printRef.current) return;
     const win = window.open('', '_blank');
-    if (!win || !certRef.current) return;
-    win.document.write(`
-      <html><head>
-        <title>Certificate — ${studentName}</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-          * { margin:0; padding:0; box-sizing:border-box; }
-          body { background:#000; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
-          .cert { width:900px; }
-          @media print { body { background:#000; } .cert { width:100%; } }
-        </style>
-      </head><body>
-        <div class="cert">${certRef.current.innerHTML}</div>
-      </body></html>
-    `);
+    if (!win) return;
+    win.document.write(`<html><head><title>Certificate</title><style>body{margin:0;padding:0;background:#000;}@page{margin:0;size:A4 landscape;}</style></head><body>${printRef.current.outerHTML}</body></html>`);
     win.document.close();
-    win.focus();
-    setTimeout(() => win.print(), 800);
+    win.print();
+  }, []);
+
+  const handleShare = useCallback(() => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
+  }, []);
+
+  const STYLE_BADGES: Record<string, { label: string; color: string }> = {
+    royal:        { label: '👑 Royal',        color: '#7c3aed' },
+    neon:         { label: '⚡ Neon',          color: '#e42527' },
+    gold:         { label: '🥇 Gold',          color: '#f59e0b' },
+    minimal:      { label: '◾ Minimal',        color: '#6b7280' },
+    dark:         { label: '🌑 Dark',          color: '#1e293b' },
+    holographic:  { label: '✨ Holographic',   color: '#29b5e8' },
   };
 
   return (
-    <div className="page" style={{ minHeight: '100vh', paddingTop: 60, paddingBottom: 80, background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: 64 }}>
 
-      {/* ── Banner ── */}
-      <div style={{ background: 'linear-gradient(180deg, rgba(124,58,237,0.08) 0%, transparent 100%)', borderBottom: '1px solid var(--border)', padding: '40px 0 32px' }}>
-        <div className="container" style={{ textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 16px', borderRadius: 999, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontSize: 12, fontWeight: 700, marginBottom: 16 }}>
-            🏅 Premium Certificate Templates
-          </div>
-          <h1 className="font-display" style={{ fontWeight: 800, fontSize: 'clamp(26px,5vw,52px)', color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 12 }}>
-            Your <span className="g-gold">Certificates</span> of Achievement
-          </h1>
-          <p style={{ fontSize: 15, color: 'var(--text-2)', maxWidth: 560, margin: '0 auto' }}>
-            Personalise and download premium certificates for your internships and course completions. Accepted by 180+ partner companies.
-          </p>
+      {/* ── Hero ── */}
+      <div style={{ background: 'linear-gradient(180deg,rgba(124,58,237,0.08) 0%,transparent 100%)', borderBottom: '1px solid var(--border)', padding: '48px 24px 36px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', padding: '5px 16px', borderRadius: 99, marginBottom: 18, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <Sparkles size={13} /> Premium Certificate Templates
         </div>
+        <h1 className="font-display" style={{ fontWeight: 800, fontSize: 'clamp(28px,5vw,44px)', color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 12 }}>
+          Personalise Your <span style={{ background: 'linear-gradient(135deg,#7c3aed,#3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Certificate</span>
+        </h1>
+        <p style={{ color: 'var(--text-2)', fontSize: 15, maxWidth: 540, margin: '0 auto' }}>
+          10 premium templates across internship, course, and excellence categories. Personalise and download instantly.
+        </p>
       </div>
 
-      <div className="container" style={{ paddingTop: 40 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 28, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1300, margin: '0 auto', padding: '36px 24px 80px', display: 'grid', gridTemplateColumns: '340px 1fr', gap: 32 }}>
 
-          {/* ── LEFT: Controls + Template List ── */}
-          <div>
-            {/* Personalise */}
-            <div className="glass-heavy" style={{ borderRadius: 18, padding: '22px 20px', marginBottom: 20 }}>
-              <h3 className="font-display" style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 16 }}>✏️ Personalise</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Your Name</label>
-                  <input id="cert-name" className="inp" value={studentName}
-                    onChange={e => setStudentName(e.target.value)}
-                    placeholder="Enter your full name" style={{ fontSize: 13.5 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Course / Internship</label>
-                  <input id="cert-course" className="inp" value={courseName}
-                    onChange={e => setCourseName(e.target.value)}
-                    placeholder="Course or internship title" style={{ fontSize: 13.5 }} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div>
-                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Issue Date</label>
-                    <input id="cert-date" className="inp" value={issueDate}
-                      onChange={e => setIssueDate(e.target.value)}
-                      placeholder="Month YYYY" style={{ fontSize: 13 }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Credential ID</label>
-                    <input id="cert-cred" className="inp" value={credId}
-                      onChange={e => setCredId(e.target.value)}
-                      placeholder="NM-2026-XXXX" style={{ fontSize: 11 }} />
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* ── Left Panel ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* Type filter */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
-              {TYPE_TABS.map(t => (
-                <button key={t.id} onClick={() => setTypeFilter(t.id)}
+          {/* Type filter */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['all','internship','course','excellence'] as const).map(t => (
+              <button key={t} onClick={() => setTypeFilter(t)}
+                style={{
+                  flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                  background: typeFilter === t ? '#7c3aed' : 'var(--bg-2)',
+                  color: typeFilter === t ? '#fff' : 'var(--text-3)',
+                  textTransform: 'capitalize', transition: 'all 0.2s',
+                }}>
+                {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Template grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, maxHeight: 340, overflowY: 'auto', paddingRight: 4 }}>
+            {filtered.map(tpl => {
+              const badge = STYLE_BADGES[tpl.style];
+              return (
+                <button key={tpl.id} onClick={() => setSelected(tpl)}
                   style={{
-                    padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    border: `1.5px solid ${typeFilter === t.id ? 'var(--accent)' : 'var(--border)'}`,
-                    background: typeFilter === t.id ? 'rgba(124,58,237,0.12)' : 'var(--surface)',
-                    color: typeFilter === t.id ? 'var(--accent)' : 'var(--text-2)',
+                    padding: '10px 12px', borderRadius: 12, border: `2px solid ${selected.id === tpl.id ? tpl.primaryColor : 'var(--border)'}`,
+                    background: selected.id === tpl.id ? `${tpl.primaryColor}12` : 'var(--bg-2)',
+                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                    boxShadow: selected.id === tpl.id ? `0 0 14px ${tpl.primaryColor}30` : 'none',
                   }}>
-                  {t.icon} {t.label}
+                  <div style={{ width: '100%', height: 44, borderRadius: 8, background: tpl.bgStyle, border: `1px solid ${tpl.primaryColor}40`, marginBottom: 7, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Award size={18} color={tpl.primaryColor} />
+                  </div>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text)', marginBottom: 3, lineHeight: 1.3 }}>{tpl.name}</div>
+                  <div style={{ fontSize: 9.5, color: badge.color, fontWeight: 600 }}>{badge.label}</div>
                 </button>
-              ))}
-            </div>
-
-            {/* Template list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {filtered.map(tmpl => (
-                <motion.button key={tmpl.id} onClick={() => setSelected(tmpl)}
-                  whileHover={{ x: 3 }} transition={{ duration: 0.15 }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-                    padding: '11px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                    border: `1.5px solid ${selected.id === tmpl.id ? tmpl.primaryColor + '60' : 'var(--border)'}`,
-                    background: selected.id === tmpl.id ? `${tmpl.primaryColor}08` : 'var(--surface)',
-                    transition: 'border-color 0.2s, background 0.2s',
-                  }}>
-                  {/* Mini preview */}
-                  <div style={{ width: 44, height: 30, borderRadius: 6, background: tmpl.bgStyle, flexShrink: 0, border: `1px solid ${tmpl.primaryColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Award size={14} color={tmpl.primaryColor} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tmpl.name}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 2 }}>{tmpl.type.charAt(0).toUpperCase() + tmpl.type.slice(1)}</div>
-                  </div>
-                  {selected.id === tmpl.id && (
-                    <CheckCircle size={14} color={tmpl.primaryColor} />
-                  )}
-                </motion.button>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
-          {/* ── RIGHT: Preview + Actions ── */}
-          <div>
-            {/* Action bar */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button className="btn btn-ghost btn-sm" onClick={handlePrint}
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Printer size={14} /> Print / Save PDF
-              </button>
-              <button className="btn btn-ghost btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Share2 size={14} /> Share
-              </button>
-              <button className="btn btn-primary" onClick={handlePrint}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13.5, padding: '9px 18px' }}>
-                <Download size={14} /> Download Certificate
-              </button>
-            </div>
+          {/* Personalise form */}
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>✏️ Personalise</div>
+            {[
+              { label: 'Student Name', val: studentName, set: setStudentName, ph: 'Your full name' },
+              { label: 'Course / Role', val: courseName, set: setCourseName, ph: 'Course or internship title' },
+              { label: 'Date', val: date, set: setDate, ph: 'Month Year' },
+              { label: 'Credential ID', val: credentialId, set: setCredentialId, ph: 'NM-2026-XXXX' },
+            ].map(f => (
+              <div key={f.label} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 4 }}>{f.label}</div>
+                <input value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
+                  style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', fontSize: 12.5, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            ))}
+          </div>
 
-            {/* Certificate preview */}
-            <AnimatePresence mode="wait">
-              <motion.div key={selected.id}
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.3 }}
-                ref={certRef}
-                style={{ borderRadius: 18, overflow: 'hidden', boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px ${selected.primaryColor}20` }}>
-                <CertificateCard
-                  template={selected}
-                  studentName={studentName}
-                  courseName={courseName}
-                  date={issueDate}
-                  credentialId={credId}
-                />
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Info strip */}
-            <div className="glass" style={{ borderRadius: 14, padding: '14px 18px', marginTop: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: `${selected.primaryColor}15`, border: `1px solid ${selected.primaryColor}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Award size={18} color={selected.primaryColor} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selected.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{selected.description} · Verified by {selected.company}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {[...Array(5)].map((_, i) => <Star key={i} size={13} fill="#f59e0b" color="#f59e0b" />)}
-              </div>
+          {/* Actions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button onClick={handlePrint}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 12, background: 'linear-gradient(135deg,#7c3aed,#3b82f6)', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', boxShadow: '0 4px 20px rgba(124,58,237,0.4)' }}>
+              <Download size={15} /> Download / Print Certificate
+            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handlePrint}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 10, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+                <Printer size={14} /> Print
+              </button>
+              <button onClick={handleShare}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 10, background: copied ? 'rgba(16,185,129,0.1)' : 'var(--bg-2)', border: `1px solid ${copied ? '#10b981' : 'var(--border)'}`, color: copied ? '#10b981' : 'var(--text)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer', transition: 'all 0.2s' }}>
+                {copied ? <CheckCircle size={14} /> : <Share2 size={14} />}
+                {copied ? 'Link Copied!' : 'Share'}
+              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      <style>{`
-        .g-gold {
-          background: linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        @media (max-width: 900px) {
-          .cert-layout { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+        {/* ── Right: Certificate Preview ── */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--text)' }}>{selected.name}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>{selected.description}</div>
+            </div>
+            <div style={{
+              padding: '5px 14px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+              background: `${STYLE_BADGES[selected.style].color}20`,
+              color: STYLE_BADGES[selected.style].color,
+              border: `1px solid ${STYLE_BADGES[selected.style].color}40`,
+            }}>
+              {STYLE_BADGES[selected.style].label}
+            </div>
+          </div>
+
+          <div ref={printRef} style={{ width: '100%', maxWidth: 860, margin: '0 auto' }}>
+            <CertificateCard
+              template={selected} studentName={studentName}
+              courseName={courseName} date={date} credentialId={credentialId}
+            />
+          </div>
+
+          {/* Template carousel nav */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
+            {TEMPLATES.map(tpl => (
+              <button key={tpl.id} onClick={() => setSelected(tpl)}
+                style={{
+                  width: 10, height: 10, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                  background: selected.id === tpl.id ? tpl.primaryColor : 'var(--border)',
+                  transition: 'all 0.2s', transform: selected.id === tpl.id ? 'scale(1.4)' : 'scale(1)',
+                }} />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
