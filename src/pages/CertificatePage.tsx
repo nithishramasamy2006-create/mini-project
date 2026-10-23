@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Award, Star, CheckCircle, Share2, Printer, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Download, Award, Star, CheckCircle, Share2, Printer, ChevronLeft, ChevronRight, Sparkles, Lock, Eye } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 
 interface CertTemplate {
@@ -310,12 +311,154 @@ function CertificateCard({ template, studentName, courseName, date, credentialId
   );
 }
 
+// ── STUDENT CERT VIEWER ─────────────────────────────────────────────────────
+// Sample issued certs stored in LS under 'nm_issued_certs'
+const SAMPLE_ISSUED = [
+  { id:'c1', template:'nm-royal',         studentName:'', courseName:'Full Stack Web Development', issuer:'NaanMudhalvan', issuerType:'college', date:'October 2026', credentialId:'NM-2026-FSW-A4B2', type:'course' },
+  { id:'c2', template:'zoho-neon',        studentName:'', courseName:'React.js Internship',         issuer:'Zoho Corporation', issuerType:'company', date:'September 2026', credentialId:'NM-2026-INT-C7D1', type:'internship' },
+  { id:'c3', template:'nm-gold',          studentName:'', courseName:'Excellence in AI/ML',          issuer:'NaanMudhalvan', issuerType:'college', date:'August 2026', credentialId:'NM-2026-EXC-E8F3', type:'excellence' },
+];
+
+function StudentCertViewer({ user }: { user: { name: string; email: string; role: string } }) {
+  const navigate = useNavigate();
+  const [printTarget, setPrintTarget] = useState<string | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const STYLE_BADGES: Record<string, { label: string; color: string }> = {
+    royal:'#7c3aed', neon:'#e42527', gold:'#f59e0b', minimal:'#6b7280', dark:'#1e293b', holographic:'#29b5e8',
+  } as any;
+
+  const handlePrint = (cert: typeof SAMPLE_ISSUED[0]) => {
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const tpl = TEMPLATES.find(t => t.id === cert.template) || TEMPLATES[0];
+    win.document.write(`<html><head><title>Certificate</title><style>body{margin:0;padding:20px;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;}@page{margin:0;size:A4 landscape;}</style></head><body><div style="width:100%;max-width:900px;">${`
+      + `<div data-cert="true">` + `</div></body></html>`);
+    win.document.close();
+    setTimeout(() => { win.print(); win.close(); }, 300);
+  };
+
+  return (
+    <div style={{ minHeight:'100vh', background:'var(--bg)', paddingTop:64 }}>
+      <div style={{ background:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)', padding:'40px 24px 32px', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(circle at 20% 50%,rgba(124,58,237,0.15) 0%,transparent 60%)', pointerEvents:'none' }}/>
+        <div style={{ maxWidth:1100, margin:'0 auto', position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              <div style={{ width:40, height:40, borderRadius:12, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Award size={20} color="#fff"/>
+              </div>
+              <div>
+                <h1 style={{ fontWeight:800, fontSize:20, color:'#fff', margin:0 }}>My Certificates</h1>
+                <p style={{ fontSize:11.5, color:'rgba(255,255,255,0.5)', margin:0 }}>Certificates issued to you by Companies & Colleges</p>
+              </div>
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:10 }}>
+            <div style={{ padding:'8px 16px', borderRadius:10, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.15)', display:'flex', alignItems:'center', gap:7, fontSize:12, color:'rgba(255,255,255,0.7)' }}>
+              <Lock size={13}/> View-only · Issued by your Company / College
+            </div>
+            <button onClick={() => navigate('/portal/student')} style={{ padding:'8px 16px', borderRadius:10, background:'rgba(124,58,237,0.2)', border:'1px solid rgba(124,58,237,0.4)', color:'#c4b5fd', fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+              ← Back to Portal
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:1100, margin:'0 auto', padding:'32px 24px 80px' }}>
+
+        {/* Info banner */}
+        <div style={{ padding:'14px 18px', borderRadius:13, background:'rgba(124,58,237,0.06)', border:'1px solid rgba(124,58,237,0.15)', marginBottom:28, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <Eye size={16} color="#7c3aed"/>
+          <div style={{ flex:1, fontSize:13, color:'var(--text-2)' }}>
+            <strong style={{ color:'var(--text)' }}>Certificates are issued by Companies and Colleges.</strong>
+            {' '}Your portal shows all certificates issued to you. To receive a certificate, complete an internship or course and request your issuer to generate one.
+          </div>
+        </div>
+
+        {/* Certs grid */}
+        {SAMPLE_ISSUED.length > 0 ? (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))', gap:20 }}>
+            {SAMPLE_ISSUED.map(cert => {
+              const tpl = TEMPLATES.find(t => t.id === cert.template) || TEMPLATES[0];
+              const typeColors: Record<string,string> = { internship:'#3b82f6', course:'#7c3aed', excellence:'#f59e0b' };
+              return (
+                <div key={cert.id} style={{ borderRadius:16, background:'var(--surface)', border:'1px solid var(--border)', overflow:'hidden' }}>
+                  {/* Mini cert preview */}
+                  <div style={{ padding:14, background:'#000' }}>
+                    <CertificateCard template={tpl} studentName={user.name} courseName={cert.courseName} date={cert.date} credentialId={cert.credentialId}/>
+                  </div>
+                  {/* Details */}
+                  <div style={{ padding:'14px 16px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                      <span style={{ fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:999, background:`${typeColors[cert.type]}15`, color:typeColors[cert.type], textTransform:'capitalize' }}>{cert.type}</span>
+                      <span style={{ fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:999, background:'rgba(16,185,129,0.1)', color:'#10b981' }}>✓ Verified</span>
+                    </div>
+                    <div style={{ fontWeight:700, fontSize:13.5, color:'var(--text)', marginBottom:3 }}>{cert.courseName}</div>
+                    <div style={{ fontSize:12, color:'var(--text-3)', marginBottom:4 }}>Issued by <strong style={{ color:'var(--text-2)' }}>{cert.issuer}</strong> · {cert.date}</div>
+                    <div style={{ fontSize:10.5, color:'var(--text-3)', fontFamily:'monospace', marginBottom:12 }}>ID: {cert.credentialId}</div>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button onClick={() => handlePrint(cert)}
+                        style={{ flex:1, padding:'8px', borderRadius:9, background:`linear-gradient(135deg,${tpl.primaryColor},${tpl.accentColor}60)`, border:'none', color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
+                        <Download size={12}/> Download
+                      </button>
+                      <button onClick={() => { navigator.clipboard.writeText(cert.credentialId); }}
+                        style={{ padding:'8px 14px', borderRadius:9, background:'var(--bg)', border:'1px solid var(--border)', color:'var(--text-2)', fontWeight:600, fontSize:12, cursor:'pointer' }}>
+                        Copy ID
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ textAlign:'center', padding:'60px 24px', borderRadius:20, background:'var(--surface)', border:'1px dashed var(--border)' }}>
+            <div style={{ fontSize:64, marginBottom:16 }}>🏅</div>
+            <h3 style={{ fontWeight:800, fontSize:18, color:'var(--text)', marginBottom:8 }}>No certificates yet</h3>
+            <p style={{ color:'var(--text-3)', fontSize:13, maxWidth:380, margin:'0 auto 20px' }}>Complete internships or courses and ask your company/college to issue a certificate. It will appear here.</p>
+            <Link to="/portal/student" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'10px 22px', borderRadius:11, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff', fontWeight:700, fontSize:13, textDecoration:'none' }}>← Back to Portal</Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── ACCESS DENIED (unauthenticated) ──────────────────────────────────────────
+function AccessDenied() {
+  return (
+    <div style={{ minHeight:'100vh', paddingTop:64, background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center', textAlign:'center', padding:'80px 24px' }}>
+      <div>
+        <div style={{ width:72, height:72, borderRadius:20, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
+          <Lock size={32} color="#ef4444"/>
+        </div>
+        <h2 style={{ fontWeight:800, fontSize:24, color:'var(--text)', marginBottom:10 }}>Access Restricted</h2>
+        <p style={{ color:'var(--text-3)', fontSize:14, maxWidth:400, margin:'0 auto 24px', lineHeight:1.6 }}>
+          The Certificate Builder is only available for <strong>Company</strong> and <strong>College</strong> accounts.
+          Students can view their issued certificates in the Student Portal.
+        </p>
+        <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
+          <Link to="/login" style={{ padding:'11px 24px', borderRadius:12, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', color:'#fff', fontWeight:700, fontSize:14, textDecoration:'none' }}>Sign In as Company / College</Link>
+          <Link to="/portal/student" style={{ padding:'11px 24px', borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text)', fontWeight:600, fontSize:14, textDecoration:'none' }}>My Certificates (Students)</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN PAGE ──────────────────────────────────────────────────────────────
 export default function CertificatePage() {
   const { user } = useAuth();
+
+  // Students → redirect to viewer
+  if (user?.role === 'student') return <StudentCertViewer user={user} />;
+  // Not logged in or wrong role → access denied
+  if (!user || (user.role !== 'company' && user.role !== 'college' && user.role !== 'admin')) return <AccessDenied />;
+
   const [typeFilter,   setTypeFilter]   = useState<'all'|'internship'|'course'|'excellence'>('all');
   const [selected,     setSelected]     = useState<CertTemplate>(TEMPLATES[0]);
-  const [studentName,  setStudentName]  = useState(user?.name || 'Your Name');
+  const [studentName,  setStudentName]  = useState('');
   const [courseName,   setCourseName]   = useState('Full Stack Web Development with React & Node.js');
   const [date,         setDate]         = useState(new Date().toLocaleDateString('en-IN',{month:'long', year:'numeric'}));
   const [credentialId, setCredentialId] = useState(`NM-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`);
@@ -347,16 +490,20 @@ export default function CertificatePage() {
     holographic:  { label: '✨ Holographic',   color: '#29b5e8' },
   };
 
+  const issuerLabel = user.role === 'company'
+    ? ((user as any).companyName || user.name || 'Your Company')
+    : ((user as any).collegeName || user.name || 'Your College');
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: 64 }}>
 
       {/* ── Hero ── */}
-      <div style={{ background: 'linear-gradient(180deg,rgba(124,58,237,0.08) 0%,transparent 100%)', borderBottom: '1px solid var(--border)', padding: '48px 24px 36px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', padding: '5px 16px', borderRadius: 99, marginBottom: 18, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          <Sparkles size={13} /> Premium Certificate Templates
+      <div style={{ background: 'linear-gradient(180deg,rgba(124,58,237,0.08) 0%,transparent 100%)', borderBottom: '1px solid var(--border)', padding: '40px 24px 30px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', padding: '5px 16px', borderRadius: 99, marginBottom: 14, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <Sparkles size={13} /> Certificate Builder · {issuerLabel}
         </div>
-        <h1 className="font-display" style={{ fontWeight: 800, fontSize: 'clamp(28px,5vw,44px)', color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 12 }}>
-          Personalise Your <span style={{ background: 'linear-gradient(135deg,#7c3aed,#3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Certificate</span>
+        <h1 className="font-display" style={{ fontWeight: 800, fontSize: 'clamp(24px,4vw,38px)', color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 10 }}>
+          Issue Certificates to <span style={{ background: 'linear-gradient(135deg,#7c3aed,#3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Students</span>
         </h1>
         <p style={{ color: 'var(--text-2)', fontSize: 15, maxWidth: 540, margin: '0 auto' }}>
           10 premium templates across internship, course, and excellence categories. Personalise and download instantly.

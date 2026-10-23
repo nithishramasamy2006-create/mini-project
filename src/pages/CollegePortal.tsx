@@ -8,10 +8,11 @@ import {
 import { useAuth } from '../AuthContext';
 import ContentManager from '../components/ContentManager';
 import ApplicationAcceptancePanel from '../components/ApplicationAcceptancePanel';
+import CertificateIssuer from '../components/CertificateIssuer';
 import { portalGetByAuthor } from '../portalData';
 import { portalAppGetByAuthor } from '../portalApplications';
 
-type Tab = 'dashboard' | 'students' | 'placements' | 'companies' | 'events' | 'registrations' | 'announcements' | 'profile' | 'settings';
+type Tab = 'dashboard' | 'students' | 'placements' | 'companies' | 'events' | 'registrations' | 'announcements' | 'certificates' | 'profile' | 'settings';
 
 // ── Mock students ─────────────────────────────────────────────────
 const MOCK_STUDENTS = Array.from({ length: 28 }, (_, i) => ({
@@ -121,6 +122,7 @@ export default function CollegePortal() {
     { id:'events',        label:'College Events',    icon:'🎪', count:myEvents },
     { id:'registrations', label:'Registrations',     icon:'📋', count:eventRegistrations.filter(r=>r.status==='registered').length },
     { id:'announcements', label:'Announcements',     icon:'📣' },
+    { id:'certificates',  label:'Issue Certificate', icon:'🏅' },
     { id:'profile',       label:'College Profile',   icon:'🏫' },
     { id:'settings',      label:'Settings',          icon:'⚙️' },
   ];
@@ -430,6 +432,16 @@ export default function CollegePortal() {
                 </div>
               ));
             })()}
+          </motion.div>
+        )}
+
+        {/* ISSUE CERTIFICATE */}
+        {tab === 'certificates' && (
+          <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
+            <CertificateIssuer
+              issuerName={(user as any).collegeName || user.name || 'Your College'}
+              issuerType="college"
+            />
           </motion.div>
         )}
 

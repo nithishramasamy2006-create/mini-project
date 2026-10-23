@@ -6,7 +6,8 @@ import {
   TrendingUp, Clock, CheckCircle, XCircle, Star, Briefcase,
   Heart, Home, Save, Bell, Trophy, Users, Zap, Calendar,
   MapPin, Globe, ChevronRight, Edit3, Bookmark, GraduationCap,
-  Monitor, Building2, Play, Target, Flame, MessageSquare, Layers
+  Monitor, Building2, Play, Target, Flame, MessageSquare, Layers,
+  Download, Lock, Eye
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { ALL_COURSES } from '../courseData';
@@ -16,7 +17,7 @@ import { PROJECTS } from '../data';
 
 // ── Types ─────────────────────────────────────────────────────────
 type Tab = 'dashboard' | 'projects' | 'courses' | 'internships' | 'events' |
-           'exams' | 'jobs' | 'mentors' | 'leaderboard' | 'profile';
+           'exams' | 'jobs' | 'mentors' | 'leaderboard' | 'certificates' | 'profile';
 
 const STATUS_COLOR: Record<string, string> = {
   pending:'#f59e0b', reviewed:'#3b82f6', shortlisted:'#7c3aed',
@@ -28,16 +29,17 @@ const STATUS_ICON: Record<string, string> = {
 
 // ── Sidebar Nav ───────────────────────────────────────────────────
 const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
-  { id:'dashboard',   label:'Dashboard',   icon:<LayoutDashboard size={16}/> },
-  { id:'courses',     label:'My Learning', icon:<Play size={16}/> },
-  { id:'projects',    label:'Projects',    icon:<Target size={16}/> },
-  { id:'internships', label:'Internships', icon:<Briefcase size={16}/> },
-  { id:'events',      label:'Events',      icon:<Calendar size={16}/> },
-  { id:'exams',       label:'Exams',       icon:<FileText size={16}/> },
-  { id:'jobs',        label:'Jobs',        icon:<Building2 size={16}/> },
-  { id:'mentors',     label:'Mentors',     icon:<Users size={16}/> },
-  { id:'leaderboard', label:'Leaderboard', icon:<Trophy size={16}/> },
-  { id:'profile',     label:'My Profile',  icon:<User size={16}/> },
+  { id:'dashboard',    label:'Dashboard',    icon:<LayoutDashboard size={16}/> },
+  { id:'courses',      label:'My Learning',  icon:<Play size={16}/> },
+  { id:'projects',     label:'Projects',     icon:<Target size={16}/> },
+  { id:'internships',  label:'Internships',  icon:<Briefcase size={16}/> },
+  { id:'events',       label:'Events',       icon:<Calendar size={16}/> },
+  { id:'exams',        label:'Exams',        icon:<FileText size={16}/> },
+  { id:'jobs',         label:'Jobs',         icon:<Building2 size={16}/> },
+  { id:'mentors',      label:'Mentors',      icon:<Users size={16}/> },
+  { id:'leaderboard',  label:'Leaderboard',  icon:<Trophy size={16}/> },
+  { id:'certificates', label:'Certificates', icon:<Award size={16}/> },
+  { id:'profile',      label:'My Profile',   icon:<User size={16}/> },
 ];
 
 // ── Stat Card ─────────────────────────────────────────────────────
@@ -493,6 +495,87 @@ export default function StudentPortal() {
               </div>
             </div>
             <div style={{ textAlign:'center' }}><Link to="/leaderboard" className="btn btn-primary" style={{ display:'inline-flex' }}>View Full Leaderboard →</Link></div>
+          </motion.div>
+        )}
+
+        {/* ── CERTIFICATES VIEWER ── */}
+        {tab === 'certificates' && (
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8, flexWrap:'wrap', gap:12 }}>
+              <div>
+                <h1 className="font-display" style={{ fontWeight:800, fontSize:22, color:'var(--text)', marginBottom:4 }}>My Certificates</h1>
+                <p style={{ fontSize:13, color:'var(--text-3)' }}>Certificates issued to you by Companies &amp; Colleges</p>
+              </div>
+              <div style={{ padding:'8px 14px', borderRadius:10, background:'rgba(124,58,237,0.08)', border:'1px solid rgba(124,58,237,0.2)', display:'flex', alignItems:'center', gap:7, fontSize:12, color:'#a78bfa' }}>
+                <Lock size={13}/> View-only · Issued by your Company / College
+              </div>
+            </div>
+
+            {/* Info banner */}
+            <div style={{ padding:'12px 16px', borderRadius:12, background:'rgba(124,58,237,0.05)', border:'1px solid rgba(124,58,237,0.12)', marginBottom:24, display:'flex', alignItems:'center', gap:10 }}>
+              <Eye size={15} color="#7c3aed"/>
+              <div style={{ fontSize:12.5, color:'var(--text-2)', lineHeight:1.6 }}>
+                <strong style={{ color:'var(--text)' }}>Certificates are issued by Companies and Colleges only.</strong>
+                {' '}Once issued, they appear here for you to view and download. You cannot create or edit certificates yourself.
+              </div>
+            </div>
+
+            {/* Sample certs — replace with real API data when backend is ready */}
+            {(() => {
+              const ISSUED = [
+                { id:'c1', courseName:'Full Stack Web Development', issuer:'NaanMudhalvan', issuerType:'college', date:'October 2026', credentialId:'NM-2026-FSW-A4B2', type:'course', color:'#7c3aed' },
+                { id:'c2', courseName:'React.js Internship Program', issuer:'Zoho Corporation', issuerType:'company', date:'September 2026', credentialId:'NM-2026-INT-C7D1', type:'internship', color:'#e42527' },
+                { id:'c3', courseName:'Excellence in Artificial Intelligence', issuer:'NaanMudhalvan', issuerType:'college', date:'August 2026', credentialId:'NM-2026-EXC-E8F3', type:'excellence', color:'#f59e0b' },
+              ];
+              const typeColors: Record<string,string> = { internship:'#3b82f6', course:'#7c3aed', excellence:'#f59e0b' };
+              const typeIcon: Record<string,string> = { internship:'💼', course:'📖', excellence:'🏆' };
+              return (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
+                  {ISSUED.map(cert => (
+                    <div key={cert.id} style={{ borderRadius:16, background:'var(--surface)', border:'1px solid var(--border)', overflow:'hidden', position:'relative' }}>
+                      {/* Colour bar */}
+                      <div style={{ height:4, background:`linear-gradient(90deg,${cert.color},${cert.color}60)` }}/>
+                      {/* Preview banner */}
+                      <div style={{ padding:'16px 16px 10px', background:`${cert.color}08`, borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12 }}>
+                        <div style={{ width:48, height:48, borderRadius:13, background:`${cert.color}15`, border:`1px solid ${cert.color}30`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
+                          {typeIcon[cert.type]}
+                        </div>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontWeight:700, fontSize:13.5, color:'var(--text)', lineHeight:1.3, marginBottom:3, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{cert.courseName}</div>
+                          <div style={{ fontSize:11, color:'var(--text-3)' }}>Issued by <strong style={{ color:'var(--text-2)' }}>{cert.issuer}</strong></div>
+                        </div>
+                      </div>
+                      {/* Details */}
+                      <div style={{ padding:'12px 16px' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:8 }}>
+                          <span style={{ fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:999, background:`${typeColors[cert.type]}15`, color:typeColors[cert.type], textTransform:'capitalize' }}>{cert.type}</span>
+                          <span style={{ fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:999, background:'rgba(16,185,129,0.1)', color:'#10b981' }}>✓ Verified</span>
+                        </div>
+                        <div style={{ fontSize:11.5, color:'var(--text-3)', marginBottom:3 }}>Date: {cert.date}</div>
+                        <div style={{ fontSize:10.5, color:'var(--text-3)', fontFamily:'monospace', marginBottom:12 }}>ID: {cert.credentialId}</div>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <button
+                            onClick={() => {
+                              const win = window.open('', '_blank');
+                              if (!win) return;
+                              win.document.write(`<html><head><title>${cert.courseName}</title><style>body{margin:20px;font-family:sans-serif;background:#030712;color:#fff;}</style></head><body><h2>${cert.courseName}</h2><p>Awarded to: <strong>${user?.name||'Student'}</strong></p><p>Issued by: ${cert.issuer}</p><p>Date: ${cert.date}</p><p>Credential ID: ${cert.credentialId}</p></body></html>`);
+                              win.document.close(); setTimeout(()=>{win.print();},400);
+                            }}
+                            style={{ flex:1, padding:'8px', borderRadius:9, background:`linear-gradient(135deg,${cert.color},${cert.color}90)`, border:'none', color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
+                            <Download size={12}/> Download
+                          </button>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(cert.credentialId)}
+                            style={{ padding:'8px 14px', borderRadius:9, background:'var(--bg)', border:'1px solid var(--border)', color:'var(--text-2)', fontWeight:600, fontSize:12, cursor:'pointer' }}>
+                            Copy ID
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </motion.div>
         )}
 
