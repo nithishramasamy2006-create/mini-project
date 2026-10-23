@@ -11,6 +11,7 @@ import ContentManager from '../components/ContentManager';
 import ApplicationAcceptancePanel from '../components/ApplicationAcceptancePanel';
 import AIResumeShortlister from '../components/AIResumeShortlister';
 import CertificateIssuer from '../components/CertificateIssuer';
+import MentorPortal from '../components/MentorPortal';
 import { portalGetByAuthor } from '../portalData';
 import {
   portalAppGetByAuthor,
@@ -19,7 +20,7 @@ import {
   type PortalApplication,
 } from '../portalApplications';
 
-type Tab = 'dashboard' | 'applications' | 'ai-shortlist' | 'certificates' | 'projects' | 'internships' | 'jobs' | 'events' | 'profile';
+type Tab = 'dashboard' | 'applications' | 'ai-shortlist' | 'mentor-portal' | 'certificates' | 'projects' | 'internships' | 'jobs' | 'events' | 'profile';
 
 const TYPE_ICON: Record<string, string> = { project: '🎯', internship: '💼', job: '🏢', event: '🎪' };
 
@@ -123,6 +124,7 @@ export default function CompanyPortal() {
     {id:'dashboard' as Tab,     label:'Dashboard',       icon:<BarChart2 size={15}/> },
     {id:'applications' as Tab,  label:'Applications',    icon:<Users size={15}/>,     badge:pendingCount},
     {id:'ai-shortlist' as Tab,  label:'AI Shortlister',  icon:<span style={{fontSize:13}}>🤖</span>, badge:apps.filter(a=>a.status==='pending').length > 0 ? '✨' : undefined},
+    {id:'mentor-portal' as Tab, label:'Mentor Portal',   icon:<span style={{fontSize:13}}>🎓</span>},
     {id:'certificates' as Tab,  label:'Issue Certificate', icon:<span style={{fontSize:13}}>🏅</span>},
     {id:'jobs' as Tab,          label:'Job Openings',    icon:<Briefcase size={15}/>, badge:myJobs},
     {id:'internships' as Tab,   label:'Internships',     icon:<TrendingUp size={15}/>,badge:myInternships},
@@ -245,11 +247,22 @@ export default function CompanyPortal() {
           </motion.div>
         )}
 
+        {tab==='mentor-portal'&&(
+          <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35}}>
+            <MentorPortal
+              companyName={(user as any).companyName||user.name||'Your Company'}
+              mentorId={companyId}
+              mentorName={user.name||(user as any).companyName||'Mentor'}
+            />
+          </motion.div>
+        )}
+
         {tab==='certificates'&&(
           <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35}}>
             <CertificateIssuer issuerName={(user as any).companyName||user.name||'Your Company'} issuerType="company"/>
           </motion.div>
         )}
+
 
         {tab==='jobs'&&(<motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35}}><h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Job Openings</h2><p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and delete job listings. Students apply via <strong>/jobs</strong>.</p><ContentManager type="job" author={companyId} accentColor="#10b981"/></motion.div>)}
         {tab==='internships'&&(<motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.35}}><h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Internships</h2><p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>Create, edit, and delete internship listings. Students apply via <strong>/internships</strong>.</p><ContentManager type="internship" author={companyId} accentColor={ACCENT}/></motion.div>)}

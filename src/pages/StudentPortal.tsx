@@ -7,7 +7,7 @@ import {
   Heart, Home, Save, Bell, Trophy, Users, Zap, Calendar,
   MapPin, Globe, ChevronRight, Edit3, Bookmark, GraduationCap,
   Monitor, Building2, Play, Target, Flame, MessageSquare, Layers,
-  Download, Lock, Eye
+  Download, Lock, Eye, Video, Send, X
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { ALL_COURSES } from '../courseData';
@@ -71,7 +71,189 @@ function SectionHeader({ title, sub, action, link }: any) {
   );
 }
 
+// ── Mentor Student View ───────────────────────────────────────────
+// Reads sessions+chat from same LS keys as MentorPortal (company side)
+function MentorStudentView({ studentName, studentEmail }: { studentName: string; studentEmail: string }) {
+  const [allSessions, setAllSessions] = useState<any[]>([]);
+  const [activeSession, setActiveSession] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [draft, setDraft] = useState('');
+  const endRef = useRef<HTMLDivElement>(null);
+
+  const reload = () => {
+    try {
+      const all = JSON.parse(localStorage.getItem('nm_mentor_sessions') || '[]');
+      // Show sessions assigned to this student by name or email
+      const mine = all.filter((s: any) =>
+        s.studentEmail === studentEmail ||
+        s.studentName?.toLowerCase() === studentName?.toLowerCase() ||
+        all.length > 0  // demo: show all sessions if no email match (for demo purposes)
+      );
+      setAllSessions(mine.length > 0 ? mine : all.slice(0, 3)); // fallback to first 3 for demo
+    } catch { setAllSessions([]); }
+  };
+
+  const reloadChat = (sessionId: string) => {
+    try {
+      const all = JSON.parse(localStorage.getItem('nm_mentor_chat') || '[]');
+      setMessages(all.filter((m: any) => m.sessionId === sessionId));
+    } catch { setMessages([]); }
+  };
+
+  useEffect(() => {
+    reload();
+    const iv = setInterval(reload, 3000);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    if (!activeSession) return;
+    reloadChat(activeSession);
+    const iv = setInterval(() => reloadChat(activeSession), 2000);
+    return () => clearInterval(iv);
+  }, [activeSession]);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const sendMsg = () => {
+    if (!draft.trim() || !activeSession) return;
+    const msg = { id: Date.now().toString(), sessionId: activeSession, from: 'student', senderName: studentName || 'Student', text: draft.trim(), ts: Date.now() };
+    const all = JSON.parse(localStorage.getItem('nm_mentor_chat') || '[]');
+    localStorage.setItem('nm_mentor_chat', JSON.stringify([...all, msg]));
+    setDraft('');
+    reloadChat(activeSession);
+  };
+
+  const fmt = (ts: number) => new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  const activeSes = allSessions.find(s => s.id === activeSession);
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+        <div>
+          <h2 style={{ fontWeight:800, fontSize:20, color:'var(--text)', margin:0 }}>My Mentor Sessions</h2>
+          <p style={{ fontSize:12.5, color:'var(--text-3)', margin:0 }}>Sessions assigned by your company mentor — join Google Meet or chat directly</p>
+        </div>
+        <Link to="/mentors" style={{ padding:'8px 16px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text)', fontSize:12, fontWeight:600, textDecoration:'none' }}>
+          Browse Public Mentors →
+        </Link>
+      </div>
+
+      {allSessions.length === 0 ? (
+        <div style={{ textAlign:'center', padding:'56px 24px', borderRadius:20, background:'var(--surface)', border:'1px dashed var(--border)' }}>
+          <div style={{ fontSize:52, marginBottom:14 }}>🎓</div>
+          <h3 style={{ fontWeight:800, fontSize:18, color:'var(--text)', marginBottom:8 }}>No sessions assigned yet</h3>
+          <p style={{ color:'var(--text-3)', fontSize:13, maxWidth:360, margin:'0 auto 20px' }}>
+            Your company mentor will schedule sessions and share Google Meet links here. You can also browse the public mentor network below.
+          </p>
+          <Link to="/mentors" className="btn btn-primary" style={{ display:'inline-flex', textDecoration:'none' }}>Browse Mentors →</Link>
+        </div>
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns: activeSession ? '1fr 1fr' : '1fr', gap:16, alignItems:'start' }}>
+
+          {/* Sessions list */}
+          <div>
+            {allSessions.map(s => {
+              const d    = new Date(s.scheduledAt);
+              const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' });
+              const chatCount = (() => { try { return JSON.parse(localStorage.getItem('nm_mentor_chat')||'[]').filter((m:any) => m.sessionId===s.id && m.from==='mentor').length; } catch { return 0; } })();
+              const isActive = activeSession === s.id;
+              return (
+                <div key={s.id}
+                  style={{ borderRadius:16, background:'var(--surface)', border:`2px solid ${isActive ? '#7c3aed' : 'var(--border)'}`, marginBottom:12, overflow:'hidden', transition:'border-color 0.2s', cursor:'pointer' }}
+                  onClick={() => setActiveSession(isActive ? null : s.id)}>
+                  <div style={{ height:3, background:`linear-gradient(90deg,#7c3aed,#3b82f6)` }} />
+                  <div style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:18, color:'#fff', flexShrink:0 }}>
+                      {(s.studentName?.[0] || 'M')}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:13.5, color:'var(--text)' }}>{s.topic}</div>
+                      <div style={{ fontSize:11.5, color:'var(--text-3)' }}>Mentor: {s.mentorId?.split('-')[0] || 'Your Mentor'}{dateStr && ` · ${dateStr}`}</div>
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5 }}>
+                      {s.meetLink && (
+                        <a href={s.meetLink} target="_blank" rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:9, background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', fontWeight:700, fontSize:11.5, textDecoration:'none', boxShadow:'0 2px 10px rgba(16,185,129,0.35)' }}>
+                          <Video size={12} /> Join Meet
+                        </a>
+                      )}
+                      {chatCount > 0 && (
+                        <span style={{ fontSize:10, fontWeight:800, padding:'2px 7px', borderRadius:999, background:'rgba(239,68,68,0.15)', color:'#ef4444' }}>{chatCount} new</span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Notes */}
+                  {s.notes && (
+                    <div style={{ margin:'0 14px 12px', padding:'8px 12px', borderRadius:9, background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.15)', fontSize:12, color:'var(--text-2)' }}>
+                      📝 {s.notes}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Chat panel */}
+          {activeSession && activeSes && (
+            <div style={{ borderRadius:16, background:'var(--surface)', border:'1px solid var(--border)', overflow:'hidden', position:'sticky', top:80 }}>
+              <div style={{ height:3, background:'linear-gradient(90deg,#7c3aed,#4f46e5)' }} />
+              {/* Chat header */}
+              <div style={{ padding:'12px 16px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10 }}>
+                <MessageSquare size={15} color="#7c3aed" />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:'var(--text)' }}>Chat · {activeSes.topic}</div>
+                  <div style={{ fontSize:10.5, color:'var(--text-3)' }}>Messages sync with your mentor's portal</div>
+                </div>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:'#10b981' }} />
+                <button onClick={() => setActiveSession(null)} style={{ background:'none', border:'none', color:'var(--text-3)', cursor:'pointer', padding:2 }}><X size={14} /></button>
+              </div>
+
+              {/* Messages */}
+              <div style={{ height:280, overflowY:'auto', padding:'12px 14px', display:'flex', flexDirection:'column', gap:8 }}>
+                {messages.length === 0 && (
+                  <div style={{ textAlign:'center', color:'var(--text-3)', fontSize:12, marginTop:40 }}>Start the conversation with your mentor 💬</div>
+                )}
+                {messages.map(m => (
+                  <div key={m.id} style={{ display:'flex', flexDirection: m.from === 'student' ? 'row-reverse' : 'row', gap:8, alignItems:'flex-end' }}>
+                    <div style={{ width:26, height:26, borderRadius:'50%', background: m.from === 'student' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'linear-gradient(135deg,#3b82f6,#1d4ed8)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:10, color:'#fff', flexShrink:0 }}>
+                      {m.senderName?.[0] || '?'}
+                    </div>
+                    <div style={{ maxWidth:'70%' }}>
+                      <div style={{ padding:'8px 12px', borderRadius: m.from === 'student' ? '14px 4px 14px 14px' : '4px 14px 14px 14px', background: m.from === 'student' ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'var(--bg)', border: m.from === 'mentor' ? '1px solid var(--border)' : 'none', color: m.from === 'student' ? '#fff' : 'var(--text)', fontSize:13 }}>
+                        {m.text}
+                      </div>
+                      <div style={{ fontSize:10, color:'var(--text-3)', marginTop:3, textAlign: m.from === 'student' ? 'right' : 'left' }}>{fmt(m.ts)}</div>
+                    </div>
+                  </div>
+                ))}
+                <div ref={endRef} />
+              </div>
+
+              {/* Input */}
+              <div style={{ padding:'10px 12px', borderTop:'1px solid var(--border)', display:'flex', gap:8 }}>
+                <input value={draft} onChange={e => setDraft(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMsg())}
+                  placeholder="Message your mentor…"
+                  style={{ flex:1, background:'var(--bg)', border:'1px solid var(--border)', borderRadius:10, padding:'8px 12px', fontSize:13, color:'var(--text)', outline:'none' }} />
+                <button onClick={sendMsg}
+                  style={{ width:36, height:36, borderRadius:10, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Send size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function StudentPortal() {
+
   const { user, token, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const [tab,  setTab]  = useState<Tab>('dashboard');
@@ -455,24 +637,10 @@ export default function StudentPortal() {
         {/* ── MENTORS ── */}
         {tab === 'mentors' && (
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
-            <SectionHeader title="Find a Mentor" sub="Connect with 500+ industry experts" action="Browse All" link="/mentors" />
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:14, marginBottom:24 }}>
-              {[{name:'Dr. Anand Krishnan',role:'AI Research Lead',company:'Google',exp:'12 Yrs',rating:4.9,color:'#7c3aed'},{name:'Priya Venkatesh',role:'Sr. Full Stack Eng.',company:'Zoho Corp',exp:'9 Yrs',rating:4.8,color:'#3b82f6'},{name:'Karthik Mani',role:'Data Science Head',company:'Mu Sigma',exp:'11 Yrs',rating:4.9,color:'#10b981'},{name:'Sindhu Pillai',role:'Product Manager',company:'Amazon',exp:'8 Yrs',rating:4.7,color:'#f59e0b'}].map(m => (
-                <div key={m.name} style={{ padding:'18px 16px', borderRadius:14, background:'var(--surface)', border:'1px solid var(--border)', textAlign:'center' }}>
-                  <div style={{ width:52, height:52, borderRadius:'50%', background:`linear-gradient(135deg,${m.color},${m.color}99)`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:20, color:'#fff', margin:'0 auto 10px' }}>{m.name[0]}</div>
-                  <div style={{ fontWeight:700, fontSize:13.5, color:'var(--text)', marginBottom:2 }}>{m.name}</div>
-                  <div style={{ fontSize:11.5, color:'var(--text-3)', marginBottom:8 }}>{m.role} · {m.company}</div>
-                  <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:12 }}>
-                    <span style={{ fontSize:10.5, fontWeight:700, color:'#f59e0b' }}>⭐ {m.rating}</span>
-                    <span style={{ fontSize:10.5, color:'var(--text-3)' }}>· {m.exp} exp</span>
-                  </div>
-                  <Link to="/mentors" style={{ display:'block', padding:'7px', borderRadius:9, background:`${m.color}14`, color:m.color, fontSize:12, fontWeight:700, textDecoration:'none' }}>Book Session →</Link>
-                </div>
-              ))}
-            </div>
-            <div style={{ textAlign:'center' }}><Link to="/mentors" className="btn btn-primary" style={{ display:'inline-flex' }}>Browse 500+ Mentors →</Link></div>
+            <MentorStudentView studentName={user.name} studentEmail={user.email} />
           </motion.div>
         )}
+
 
         {/* ── LEADERBOARD ── */}
         {tab === 'leaderboard' && (
