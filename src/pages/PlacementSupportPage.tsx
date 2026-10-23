@@ -197,7 +197,7 @@ export default function PlacementSupportPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
             {SERVICES.map((svc, i) => (
               <motion.div key={svc.title} {...anim(i * 0.08)}
-                className="glass-card card" style={{ padding: 28, position: 'relative', overflow: 'hidden' }}
+                className="glass-card card" style={{ padding: 28, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
               >
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${svc.color},transparent)` }} />
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: `${svc.color}18`, color: svc.color, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
@@ -205,13 +205,19 @@ export default function PlacementSupportPage() {
                 </div>
                 <h3 style={{ fontWeight: 700, fontSize: 17, color: '#e2e8f0', marginBottom: 10 }}>{svc.title}</h3>
                 <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 16 }}>{svc.desc}</p>
-                <ul style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <ul style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
                   {svc.features.map(f => (
                     <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#94a3b8' }}>
                       <CheckCircle size={13} color={svc.color} style={{ flexShrink: 0 }} /> {f}
                     </li>
                   ))}
                 </ul>
+                {i === 0 && (
+                  <Link to="/resume-builder"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 18, padding: '10px 18px', borderRadius: 11, background: `linear-gradient(135deg,${svc.color},#4f46e5)`, color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none', boxShadow: `0 4px 14px ${svc.color}35`, width: 'fit-content' }}>
+                    <FileText size={14}/> Try Resume Builder →
+                  </Link>
+                )}
               </motion.div>
             ))}
           </div>

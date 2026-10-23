@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Menu, X, Sun, Moon, LogOut, BookOpen, Briefcase, LayoutDashboard } from 'lucide-react';
+import { Zap, Menu, X, Sun, Moon, LogOut, BookOpen, Briefcase, LayoutDashboard, FileText } from 'lucide-react';
 import { NAV_ITEMS } from '../data';
 import { useTheme } from '../ThemeContext';
 import { useAuth, rolePortal } from '../AuthContext';
@@ -115,7 +115,8 @@ export default function Navbar() {
                       {/* Student quick links */}
                       {userRole === 'student' && (
                         <>
-                          <NavMenuItem icon={<BookOpen size={14}/>}  label="My Courses"      onClick={() => { navigate('/portal/student'); setUserMenu(false); }} />
+                          <NavMenuItem icon={<BookOpen size={14}/>}  label="My Learning"     onClick={() => { navigate('/my-learning'); setUserMenu(false); }} />
+                          <NavMenuItem icon={<FileText size={14}/>}  label="Resume Builder"  onClick={() => { navigate('/resume-builder'); setUserMenu(false); }} />
                           <NavMenuItem icon={<Briefcase size={14}/>} label="My Applications" onClick={() => { navigate('/portal/student'); setUserMenu(false); }} />
                         </>
                       )}
