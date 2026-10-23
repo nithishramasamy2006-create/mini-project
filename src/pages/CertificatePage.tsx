@@ -315,27 +315,41 @@ function CertificateCard({ template, studentName, courseName, date, credentialId
 // Sample issued certs stored in LS under 'nm_issued_certs'
 const SAMPLE_ISSUED = [
   { id:'c1', template:'nm-royal',         studentName:'', courseName:'Full Stack Web Development', issuer:'NaanMudhalvan', issuerType:'college', date:'October 2026', credentialId:'NM-2026-FSW-A4B2', type:'course' },
-  { id:'c2', template:'zoho-neon',        studentName:'', courseName:'React.js Internship',         issuer:'Zoho Corporation', issuerType:'company', date:'September 2026', credentialId:'NM-2026-INT-C7D1', type:'internship' },
-  { id:'c3', template:'nm-gold',          studentName:'', courseName:'Excellence in AI/ML',          issuer:'NaanMudhalvan', issuerType:'college', date:'August 2026', credentialId:'NM-2026-EXC-E8F3', type:'excellence' },
+  { id:'c2', template:'zoho-neon', studentName:'', courseName:'React.js Internship', issuer:'Zoho Corporation', issuerType:'company', date:'September 2026', credentialId:'NM-2026-INT-C7D1', type:'internship' },
+  { id:'c3', template:'nm-gold',   studentName:'', courseName:'Excellence in AI/ML',  issuer:'NaanMudhalvan',  issuerType:'college', date:'August 2026',    credentialId:'NM-2026-EXC-E8F3', type:'excellence' },
 ];
 
 function StudentCertViewer({ user }: { user: { name: string; email: string; role: string } }) {
   const navigate = useNavigate();
-  const [printTarget, setPrintTarget] = useState<string | null>(null);
-  const printRef = useRef<HTMLDivElement>(null);
-
-  const STYLE_BADGES: Record<string, { label: string; color: string }> = {
-    royal:'#7c3aed', neon:'#e42527', gold:'#f59e0b', minimal:'#6b7280', dark:'#1e293b', holographic:'#29b5e8',
-  } as any;
 
   const handlePrint = (cert: typeof SAMPLE_ISSUED[0]) => {
+    const tpl = TEMPLATES.find(t => t.id === cert.template) || TEMPLATES[0];
+    const p   = tpl.primaryColor;
+    const a   = tpl.accentColor;
     const win = window.open('', '_blank');
     if (!win) return;
-    const tpl = TEMPLATES.find(t => t.id === cert.template) || TEMPLATES[0];
-    win.document.write(`<html><head><title>Certificate</title><style>body{margin:0;padding:20px;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;}@page{margin:0;size:A4 landscape;}</style></head><body><div style="width:100%;max-width:900px;">${`
-      + `<div data-cert="true">` + `</div></body></html>`);
+    const html =
+      '<html><head><title>' + cert.courseName + '</title>' +
+      '<style>body{margin:0;padding:24px;background:#030712;display:flex;align-items:center;justify-content:center;min-height:100vh;}' +
+      '@page{margin:0;size:A4 landscape;}</style></head><body>' +
+      '<div style="width:100%;max-width:860px;aspect-ratio:1.414/1;position:relative;overflow:hidden;border-radius:14px;' +
+        'background:' + tpl.bgStyle + ';border:1.5px solid ' + p + '80;' +
+        'box-shadow:0 0 50px ' + p + '30,0 20px 70px rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;">' +
+        '<div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:' + p + 'cc;font-family:Inter,sans-serif;margin-bottom:6px;">' + tpl.company + '</div>' +
+        '<div style="display:inline-block;font-size:7px;letter-spacing:0.28em;text-transform:uppercase;color:#fff;font-weight:700;' +
+          'background:linear-gradient(90deg,' + p + ',' + a + ');padding:4px 16px;border-radius:99px;margin-bottom:16px;">' +
+          (cert.type === 'internship' ? 'Certificate of Internship' : cert.type === 'course' ? 'Certificate of Completion' : 'Certificate of Excellence') +
+        '</div>' +
+        '<div style="font-size:7px;letter-spacing:0.2em;text-transform:uppercase;color:' + a + '90;font-family:Inter,sans-serif;margin-bottom:8px;">Proudly Awarded To</div>' +
+        '<div style="font-size:36px;font-weight:800;color:#fff;letter-spacing:-0.02em;font-family:Georgia,serif;text-shadow:0 0 24px ' + p + '80;margin-bottom:8px;">' + (user.name || 'Student') + '</div>' +
+        '<div style="font-size:14px;font-weight:600;color:' + a + ';font-family:Inter,sans-serif;margin-bottom:20px;">' + cert.courseName + '</div>' +
+        '<div style="font-size:8px;color:' + p + '80;font-family:monospace;letter-spacing:0.1em;">Credential ID: ' + cert.credentialId + ' · Date: ' + cert.date + '</div>' +
+        '<div style="font-size:7px;color:' + p + '60;font-family:monospace;margin-top:4px;">Issued by: ' + cert.issuer + ' · Verify at naanmudhalvan.tn.gov.in</div>' +
+      '</div>' +
+      '</body></html>';
+    win.document.write(html);
     win.document.close();
-    setTimeout(() => { win.print(); win.close(); }, 300);
+    setTimeout(() => { win.print(); }, 400);
   };
 
   return (
