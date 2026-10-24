@@ -2,7 +2,10 @@
 // Portal Application Pipeline — localStorage-based
 // Handles applications/registrations for portal-created content
 // Flow: Student applies → portal creator sees it → updates status
+// Email alerts are fired when status changes (non-blocking).
 // ================================================================
+
+import { BASE } from './api';
 
 export interface PortalApplication {
   id:          number;
@@ -68,13 +71,34 @@ export function portalAppGetByItem(itemId: number): PortalApplication[] {
   return portalAppGetAll().filter(a => a.itemId === itemId);
 }
 
-export function portalAppUpdateStatus(id: number, status: ApplicationStatus): void {
+export function portalAppUpdateStatus(id: number, status: ApplicationStatus, token?: string): void {
   const all = portalAppGetAll();
   const idx = all.findIndex(a => a.id === id);
   if (idx !== -1) {
-    all[idx].status    = status;
-    all[idx].updatedAt = new Date().toISOString();
+    const app = all[idx];
+    const prevStatus = app.status;
+    app.status    = status;
+    app.updatedAt = new Date().toISOString();
     localStorage.setItem(KEY, JSON.stringify(all));
+
+    // ── Fire email alert (non-blocking) if status actually changed ──
+    if (status !== prevStatus && app.studentEmail) {
+      const payload = {
+        studentName:  app.studentName,
+        studentEmail: app.studentEmail,
+        role:         app.itemTitle,
+        company:      app.itemCompany,
+        status,
+      };
+      fetch(`${BASE}/email/status-alert`, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      }).catch(() => {}); // silent — offline or no backend is fine
+    }
   }
 }
 

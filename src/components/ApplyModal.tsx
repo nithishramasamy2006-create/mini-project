@@ -268,11 +268,19 @@ export default function ApplyModal({ open, onClose, onSuccess, type, itemId, ite
                     <div style={{
                       padding: '10px 16px', borderRadius: 10,
                       background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)',
-                      fontSize: 12, color: '#10b981', fontWeight: 600,
+                      fontSize: 12, color: '#10b981', fontWeight: 600, marginBottom: 10,
                     }}>
                       ✓ The company will review and contact you within 3–5 business days
                     </div>
+                    <div style={{
+                      padding: '9px 16px', borderRadius: 10,
+                      background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)',
+                      fontSize: 12, color: '#818cf8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7,
+                    }}>
+                      <span>✉️</span> A confirmation email has been sent to your registered address
+                    </div>
                   </motion.div>
+
 
                 ) : (
                   /* ══════════ APPLICATION FORM ══════════ */

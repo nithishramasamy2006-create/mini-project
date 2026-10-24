@@ -12,6 +12,7 @@ import leaderboardRouter from './routes/leaderboard.js';
 import companyRouter     from './routes/company.js';
 import collegeRouter     from './routes/college.js';
 import adminRouter       from './routes/admin.js';
+import emailRouter       from './routes/email.js';
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -43,6 +44,7 @@ app.use('/api/leaderboard',  leaderboardRouter);
 app.use('/api/company',      companyRouter);
 app.use('/api/college',      collegeRouter);
 app.use('/api/admin',        adminRouter);
+app.use('/api/email',        emailRouter);
 
 // 404 handler
 app.use((req, res) => {

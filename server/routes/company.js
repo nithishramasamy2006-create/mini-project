@@ -2,6 +2,7 @@ import express from 'express';
 import { protect, companyOnly } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Application from '../models/Application.js';
+import { sendStatusChangeAlert } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -53,18 +54,45 @@ router.get('/applications', async (req, res) => {
 router.patch('/applications/:id', async (req, res) => {
   try {
     const { status, notes } = req.body;
-    const valid = ['pending', 'shortlisted', 'interview', 'hired', 'rejected'];
+    const valid = ['pending', 'reviewed', 'shortlisted', 'interview', 'hired', 'rejected'];
     if (!valid.includes(status)) return res.status(400).json({ message: 'Invalid status.' });
 
     const app = await Application.findById(req.params.id);
     if (!app) return res.status(404).json({ message: 'Application not found.' });
     if (app.company !== req.user.companyName) return res.status(403).json({ message: 'Not authorized.' });
 
+    const prevStatus = app.status;
     app.status = status;
-    if (notes) app.notes = notes;
+    if (notes !== undefined) app.notes = notes;
     await app.save();
 
-    res.json({ success: true, message: `Application marked as ${status}.`, application: app });
+    // ── Resolve student email and send status-change alert ───
+    let studentEmail = app.userEmail;
+    let studentName  = app.userName;
+    if (!studentEmail && app.userId) {
+      const student = await User.findById(app.userId).select('email name');
+      if (student) { studentEmail = student.email; studentName = student.name; }
+    }
+    let emailSent = false;
+    if (studentEmail && status !== prevStatus) {
+      const result = await sendStatusChangeAlert({
+        studentName:  studentName  || 'Student',
+        studentEmail,
+        role:         app.itemTitle   || app.type || 'Application',
+        company:      req.user.companyName || app.company || 'Company',
+        status,
+        notes:        notes || '',
+        appId:        app._id?.toString(),
+      });
+      emailSent = result.success;
+    }
+
+    res.json({
+      success:   true,
+      message:   `Application marked as ${status}${emailSent ? ' · Email alert sent ✉️' : ''}.`,
+      application: app,
+      emailSent,
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
   }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle, XCircle, Search, ChevronDown, ChevronUp,
@@ -352,9 +352,19 @@ export default function ApplicationAcceptancePanel({
     return list;
   }, [all, typeF, statusF, q, sortDir]);
 
+  const [emailToast, setEmailToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleUpdate = (id: number, status: ApplicationStatus) => {
+    const app = all.find(a => a.id === id);
     portalAppUpdateStatus(id, status);
     reload();
+    // Show brief ✉️ toast if the app has a student email
+    if (app?.studentEmail) {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      setEmailToast(`✉️ Email alert sent to ${app.studentEmail}`);
+      toastTimerRef.current = setTimeout(() => setEmailToast(null), 3500);
+    }
   };
   const handleDelete = (id: number) => {
     portalAppDelete(id);
@@ -383,9 +393,35 @@ export default function ApplicationAcceptancePanel({
   );
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      {/* ── Email-sent toast ─────────────────────────────────── */}
+      <AnimatePresence>
+        {emailToast && (
+          <motion.div
+            key="email-toast"
+            initial={{ opacity: 0, y: -16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.25 }}
+            style={{
+              position: 'fixed', top: 80, right: 24, zIndex: 9999,
+              background: 'linear-gradient(135deg,#064e3b,#065f46)',
+              border: '1px solid #10b981',
+              color: '#6ee7b7', fontWeight: 700, fontSize: 13,
+              padding: '12px 20px', borderRadius: 12,
+              boxShadow: '0 8px 30px rgba(16,185,129,0.35)',
+              display: 'flex', alignItems: 'center', gap: 8, maxWidth: 360,
+            }}
+          >
+            <span style={{ fontSize: 18 }}>✉️</span>
+            {emailToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Stats */}
       <StatsBar apps={all}/>
+
 
       {/* Toolbar */}
       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>

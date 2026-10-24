@@ -59,5 +59,33 @@ export const api = {
         body: JSON.stringify(fields),
       }).then(r => r.json()),
   },
+  applications: {
+    /** Update status of an application (company / college / admin).
+     *  Triggers a branded email alert to the student automatically. */
+    updateStatus: (
+      appId: string,
+      status: 'pending' | 'reviewed' | 'shortlisted' | 'interview' | 'hired' | 'accepted' | 'rejected',
+      token: string,
+      notes?: string,
+    ) =>
+      fetch(`${BASE}/applications/${appId}/status`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ status, notes }),
+      }).then(r => r.json()),
+
+    /** Company-portal status update (uses /company/applications/:id) */
+    companyUpdateStatus: (
+      appId: string,
+      status: string,
+      token: string,
+      notes?: string,
+    ) =>
+      fetch(`${BASE}/company/applications/${appId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ status, notes }),
+      }).then(r => r.json()),
+  },
   health: () => fetchAPI<{ status: string }>('/health'),
 };
