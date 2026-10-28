@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, MapPin, Calendar, Clock, Users, Trophy, Award,
   Wifi, Building2, Layers, X, Bookmark, Share2, ChevronRight,
-  Flame, Star, Filter, Bell, CheckCircle, ExternalLink
+  Flame, Star, Filter, Bell, CheckCircle, ExternalLink, Download, Printer
 } from 'lucide-react';
 import { EVENTS, EVENT_TYPES, type Event, type EventType } from '../eventsData';
 import { useDebounce } from '../hooks';
@@ -11,6 +11,17 @@ import { useNavigate } from 'react-router-dom';
 import ApplyModal from '../components/ApplyModal';
 import PortalApplyModal from '../components/PortalApplyModal';
 import { portalGetAll } from '../portalData';
+import { useAuth } from '../AuthContext';
+import {
+  saveIssuedCertificate,
+  getEventCertificateSettings,
+  getAllCertificateTemplates,
+  getEventParticipants,
+  saveEventParticipants,
+  type IssuedCertificate,
+  type EventParticipant,
+} from '../certificateData';
+import CertificateRenderer, { printCertificateWindow } from '../components/CertificateRenderer';
 
 // Merge static + portal events
 function getAllEvents(): Event[] {
@@ -21,7 +32,10 @@ function getAllEvents(): Event[] {
     type:                 (['hackathon','workshop','webinar','bootcamp','career-fair','competition','conference','guest-lecture'].includes(e.type) ? e.type : 'workshop') as EventType,
     banner:               e.banner      || '🎤',
     organizer:            e.organizer   || e._author || 'Organizer',
-    organizerLogo:        e.organizerLogo || '🏢',
+    organizerType:        (e.organizerType || (String(e.organizer || '').toLowerCase().includes('college') || String(e.organizer || '').toLowerCase().includes('univ') ? 'college' : 'company')) as any,
+    mentorName:           e.mentorName  || `${e.organizer || 'Lead'} Mentor`,
+    mentorRole:           e.mentorRole  || 'Lead Evaluator & Mentor',
+    organizerLogo:        e.organizerLogo || (String(e.organizer || '').toLowerCase().includes('college') ? '🏛️' : '🏢'),
     date:                 e.date        || '',
     endDate:              e.endDate     || e.date || '',
     time:                 e.time        || 'TBD',
@@ -71,9 +85,19 @@ function urgencyLabel(d: string) {
 // ── Register Modal ──────────────────────────────────────────────
 function RegisterModal({ event, onClose }: { event: Event; onClose: () => void }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState<'form' | 'success'>('form');
-  const [form, setForm] = useState({ name: '', email: '', college: '', branch: '', year: '', phone: '', motivation: '' });
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    college: (user as any)?.collegeName || (user as any)?.college || '',
+    branch: (user as any)?.branch || '',
+    year: (user as any)?.year || '',
+    phone: (user as any)?.phone || '',
+    motivation: ''
+  });
   const [loading, setLoading] = useState(false);
+  const [regPass, setRegPass] = useState<any>(null);
   const [registered, setRegistered] = useState<Set<number>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('nm_registered_events') || '[]')); }
     catch { return new Set(); }
@@ -82,10 +106,64 @@ function RegisterModal({ event, onClose }: { event: Event; onClose: () => void }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 700));
+
+    // 1. Mark event as registered
     const next = new Set(registered).add(event.id);
     localStorage.setItem('nm_registered_events', JSON.stringify([...next]));
     setRegistered(next);
+
+    const studentDisplayName = form.name.trim() || user?.name || 'Student Participant';
+    const studentEmail = form.email.trim() || user?.email || 'student@college.edu';
+    const passId = `PASS-${event.id}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+    // 2. Add student to the event participant roster for the company or college mentor to review & issue after completion!
+    const currentParticipants = getEventParticipants(event.id);
+    const existingIndex = currentParticipants.findIndex(p => p.email.toLowerCase() === studentEmail.toLowerCase());
+    const newParticipantRecord: EventParticipant = {
+      id: `ptp-${Date.now()}`,
+      name: studentDisplayName,
+      email: studentEmail,
+      college: form.college || 'College of Engineering',
+      branch: (user as any)?.branch || form.branch || 'IT',
+      attendanceVerified: false, // NOT completed yet — mentor verifies after the event!
+      isWinner: false,
+      isAppreciated: false,
+    };
+
+    if (existingIndex >= 0) {
+      currentParticipants[existingIndex] = { ...currentParticipants[existingIndex], ...newParticipantRecord };
+      saveEventParticipants(event.id, currentParticipants);
+    } else {
+      saveEventParticipants(event.id, [newParticipantRecord, ...currentParticipants]);
+    }
+
+    // 3. Save ticket / registration pass
+    const regRecord = {
+      passId,
+      eventId: event.id,
+      eventTitle: event.title,
+      studentName: studentDisplayName,
+      studentEmail,
+      college: form.college || 'College of Engineering',
+      organizer: event.organizer,
+      organizerType: event.organizerType || 'company',
+      mentorName: event.mentorName,
+      mentorRole: event.mentorRole,
+      date: event.date,
+      time: event.time,
+      mode: event.mode,
+      location: event.location,
+      registeredAt: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      certificateIssued: false,
+    };
+    try {
+      const allRegs = JSON.parse(localStorage.getItem('nm_event_registration_passes') || '[]');
+      const filtered = allRegs.filter((r: any) => !(r.eventId === event.id && r.studentEmail.toLowerCase() === studentEmail.toLowerCase()));
+      localStorage.setItem('nm_event_registration_passes', JSON.stringify([regRecord, ...filtered]));
+    } catch {}
+
+    setRegPass(regRecord);
     setLoading(false);
     setStep('success');
   };
@@ -93,23 +171,35 @@ function RegisterModal({ event, onClose }: { event: Event; onClose: () => void }
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <motion.div
         initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
         transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-        style={{ width: '100%', maxWidth: 520, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 22, overflow: 'hidden', maxHeight: '92vh', overflowY: 'auto' }}>
+        style={{ width: '100%', maxWidth: 560, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 22, overflow: 'hidden', maxHeight: '92vh', overflowY: 'auto' }}>
 
         {/* Header */}
-        <div style={{ padding: '22px 24px 18px', borderBottom: '1px solid var(--border)', background: `linear-gradient(135deg, ${event.color}18, transparent)`, position: 'sticky', top: 0, backdropFilter: 'blur(10px)', zIndex: 2 }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', background: `linear-gradient(135deg, ${event.color}18, transparent)`, position: 'sticky', top: 0, backdropFilter: 'blur(10px)', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 10, fontWeight: 800, color: event.color, textTransform: 'uppercase', letterSpacing: '0.1em', background: `${event.color}18`, padding: '2px 9px', borderRadius: 999 }}>
                   {EVENT_TYPES.find(t => t.id === event.type)?.icon} {event.type.replace('-', ' ')}
                 </span>
+                <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 9px', borderRadius: 999, background: event.organizerType === 'college' ? 'rgba(16,185,129,0.12)' : 'rgba(59,130,246,0.12)', color: event.organizerType === 'college' ? '#10b981' : '#3b82f6' }}>
+                  {event.organizerType === 'college' ? '🏛️ College Event' : '🏢 Company Event'}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.12)', padding: '2px 9px', borderRadius: 999 }}>
+                  📜 Verified Certificate on Completion
+                </span>
               </div>
-              <h2 className="font-display" style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', lineHeight: 1.3 }}>{event.title}</h2>
+              <h2 className="font-display" style={{ fontWeight: 700, fontSize: 16.5, color: 'var(--text)', lineHeight: 1.3 }}>{event.title}</h2>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
+                Host: <strong style={{ color: 'var(--text-2)' }}>{event.organizer}</strong>
+                {event.mentorName && (
+                  <span> · Evaluator: <strong style={{ color: 'var(--text-2)' }}>{event.mentorName}</strong> ({event.mentorRole || 'Lead Mentor'})</span>
+                )}
+              </div>
             </div>
             <button onClick={onClose} style={{ background: 'var(--border)', border: 'none', cursor: 'pointer', borderRadius: 8, padding: 7, color: 'var(--text-2)', flexShrink: 0 }}>
               <X size={15} />
@@ -117,18 +207,108 @@ function RegisterModal({ event, onClose }: { event: Event; onClose: () => void }
           </div>
         </div>
 
-        {step === 'success' ? (
-          <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+        {step === 'success' && regPass ? (
+          <div style={{ padding: '32px 24px', textAlign: 'center' }}>
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-              <div style={{ width: 80, height: 80, borderRadius: '50%', background: `${event.color}20`, border: `2px solid ${event.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>
-                ✅
+              <div style={{ width: 68, height: 68, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', border: `2px solid #10b981`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 30 }}>
+                🎟️
               </div>
             </motion.div>
-            <h3 className="font-display" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>You're Registered!</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 13.5, marginBottom: 6 }}>A confirmation has been sent to <strong>{form.email}</strong></p>
-            <p style={{ color: 'var(--text-3)', fontSize: 12.5, marginBottom: 28 }}>📅 {event.date} · ⏰ {event.time} · {event.mode === 'online' ? '🌐 Online' : `📍 ${event.venue || event.location}`}</p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={onClose} className="btn btn-primary" style={{ padding: '10px 24px' }}>Done</button>
+            <h3 className="font-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>
+              Registration Confirmed! 🎉
+            </h3>
+            <p style={{ color: 'var(--text-2)', fontSize: 13.5, marginBottom: 20 }}>
+              Your seat for <strong>{event.title}</strong> is reserved. Confirmation details sent to <strong>{form.email}</strong>.
+            </p>
+
+            {/* Official Digital Event Pass Card */}
+            <div id="event-ticket-pass" style={{
+              padding: '20px 22px', borderRadius: 16, background: 'var(--bg-2)',
+              border: '1px solid var(--border)', marginBottom: 20, textAlign: 'left',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 10.5, fontWeight: 800, color: '#7c3aed', background: 'rgba(124,58,237,0.12)', padding: '3px 10px', borderRadius: 99, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  🎟️ Official Event Pass &amp; Entry Ticket
+                </span>
+                <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, color: 'var(--text-3)' }}>
+                  {regPass.passId}
+                </span>
+              </div>
+
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>
+                Attendee: {regPass.studentName}
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginBottom: 10 }}>
+                {event.title}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 11.5, color: 'var(--text-3)', padding: '10px 0', borderTop: '1px dashed var(--border)', borderBottom: '1px dashed var(--border)' }}>
+                <div><strong>Host Entity:</strong> {event.organizerType === 'college' ? '🏛️ College: ' : '🏢 Company: '}{event.organizer}</div>
+                <div><strong>Lead Mentor:</strong> {event.mentorName || 'Lead Mentor'}</div>
+                <div><strong>Date &amp; Time:</strong> {event.date} · {event.time}</div>
+                <div><strong>Mode &amp; Location:</strong> {event.mode === 'online' ? '🌐 Online Remote Link' : '📍 ' + event.location}</div>
+                <div><strong>Institution:</strong> {regPass.college}</div>
+                <div><strong>Accreditation:</strong> Verified Participant Pass</div>
+              </div>
+
+              {/* Certificate Issuance Notice */}
+              <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+                <span style={{ fontSize: 16 }}>⏳</span>
+                <div style={{ fontSize: 11.5, color: '#eab308', lineHeight: 1.5 }}>
+                  <strong>Certificate Policy:</strong> Certificates are awarded <em>after</em> event completion. The <strong>{event.organizer}</strong> {event.organizerType === 'college' ? 'faculty coordinator' : 'mentor'} ({event.mentorName || 'Lead Mentor'}) will verify your attendance and issue your verified credential directly to your Student Portal.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  const win = window.open('', '_blank');
+                  if (!win) return;
+                  win.document.write(`
+                    <!DOCTYPE html><html><head><title>Event Pass — ${event.title}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+                    <style>body{margin:0;padding:32px;background:#f8fafc;font-family:'Inter',sans-serif;}@page{size:A5 landscape;margin:10mm;}</style>
+                    </head><body><div style="max-width:540px;margin:0 auto;background:#fff;border:2px dashed #6366f1;border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <span style="font-size:11px;font-weight:800;color:#4f46e5;text-transform:uppercase;letter-spacing:0.1em;">🎟️ OFFICIAL ADMIT PASS</span>
+                        <span style="font-family:monospace;font-size:12px;color:#64748b;">${regPass.passId}</span>
+                      </div>
+                      <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 6px;">${event.title}</h2>
+                      <p style="font-size:14px;color:#475569;margin:0 0 16px;">Attendee: <strong>${regPass.studentName}</strong> (${regPass.college})</p>
+                      <div style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:12px 0;margin-bottom:16px;font-size:12.5px;color:#334155;line-height:1.7;">
+                        <div>📅 <strong>Date:</strong> ${event.date} · ${event.time}</div>
+                        <div>🏢 <strong>Organizer:</strong> ${event.organizer}</div>
+                        <div>📍 <strong>Venue:</strong> ${event.mode === 'online' ? 'Online Video Conference' : event.location}</div>
+                      </div>
+                      <p style="font-size:11px;color:#64748b;margin:0;">Please present this pass upon arrival. Certificates will be issued by the mentor post completion.</p>
+                    </div><script>setTimeout(()=>{window.print();},400);</script></body></html>
+                  `);
+                  win.document.close();
+                }}
+                style={{
+                  padding: '10px 18px', borderRadius: 11, background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                  border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 14px rgba(124,58,237,0.3)',
+                }}
+              >
+                <Printer size={14} /> Print Event Pass
+              </button>
+
+              <button
+                onClick={() => { onClose(); navigate('/portal/student'); }}
+                style={{
+                  padding: '10px 18px', borderRadius: 11, background: 'var(--bg-2)',
+                  border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                View in My Events
+              </button>
+
+              <button onClick={onClose} className="btn btn-primary" style={{ padding: '10px 20px' }}>
+                Done
+              </button>
             </div>
           </div>
         ) : (
@@ -236,12 +416,12 @@ export default function EventsPage() {
       if (priceFilter === 'paid' && ev.price === 'Free') return false;
       if (dQ) {
         const q2 = dQ.toLowerCase();
-        const match = ev.title.toLowerCase().includes(q2) ||
-          ev.organizer.toLowerCase().includes(q2) ||
+        const match = (ev.title || '').toLowerCase().includes(q2) ||
+          (ev.organizer || '').toLowerCase().includes(q2) ||
           (ev.category || '').toLowerCase().includes(q2) ||
-          ev.tags.some(t => t.toLowerCase().includes(q2)) ||
-          ev.skills.some(s => s.toLowerCase().includes(q2)) ||
-          ev.location.toLowerCase().includes(q2);
+          (ev.tags || []).some(t => (t || '').toLowerCase().includes(q2)) ||
+          (ev.skills || []).some(s => (s || '').toLowerCase().includes(q2)) ||
+          (ev.location || '').toLowerCase().includes(q2);
         if (!match) return false;
       }
       return true;
@@ -487,11 +667,19 @@ export default function EventsPage() {
                         {ev.title}
                       </h3>
 
-                      {/* Organizer */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                      {/* Organizer & Certificate Badges */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 16 }}>{ev.organizerLogo}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>{ev.organizer}</span>
-                        {ev.certificate && <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 7px', borderRadius: 999 }}>🏅 Cert</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 700 }}>{ev.organizer}</span>
+                          <span style={{ fontSize: 9.5, fontWeight: 800, padding: '1px 6px', borderRadius: 999, background: ev.organizerType === 'college' ? 'rgba(16,185,129,0.12)' : 'rgba(59,130,246,0.12)', color: ev.organizerType === 'college' ? '#10b981' : '#3b82f6' }}>
+                            {ev.organizerType === 'college' ? '🏛️ College' : '🏢 Company'}
+                          </span>
+                        </div>
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                          <span style={{ fontSize: 9.5, fontWeight: 700, color: '#0284c7', background: 'rgba(2,132,199,0.12)', padding: '2px 7px', borderRadius: 999 }}>📜 Participation Cert</span>
+                          {ev.prize && <span style={{ fontSize: 9.5, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '2px 7px', borderRadius: 999 }}>🏆 Winner Cert</span>}
+                        </div>
                       </div>
 
                       {/* Info grid */}

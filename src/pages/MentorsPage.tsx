@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Star, Users, Briefcase, CheckCircle, MessageCircle, ChevronDown, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Star, Users, Briefcase, CheckCircle, MessageCircle, ChevronDown, Zap, Video } from 'lucide-react';
 import { MENTORS } from '../data';
 import ApplyModal from '../components/ApplyModal';
 
@@ -10,6 +11,14 @@ export default function MentorsPage() {
   const [q, setQ]         = useState('');
   const [domain, setDomain] = useState('All Domains');
   const [applyItem, setApplyItem] = useState<typeof MENTORS[0] | null>(null);
+  const [sessionCount, setSessionCount] = useState(0);
+
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('nm_mentor_sessions') || '[]');
+      setSessionCount(s.length);
+    } catch {}
+  }, []);
 
   const filtered = MENTORS.filter(m => {
     if (q && !m.name.toLowerCase().includes(q.toLowerCase()) && !m.company.toLowerCase().includes(q.toLowerCase()) && !m.skills.some(s=>s.toLowerCase().includes(q.toLowerCase()))) return false;
@@ -48,6 +57,29 @@ export default function MentorsPage() {
       </div>
 
       <div className="container" style={{ paddingTop:32, paddingBottom:64 }}>
+        {/* Live Scheduled Meetings Banner */}
+        {sessionCount > 0 && (
+          <div style={{ padding:'14px 18px', borderRadius:14, background:'linear-gradient(135deg,rgba(16,185,129,0.1),rgba(5,150,105,0.06))', border:'1px solid rgba(16,185,129,0.3)', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:38, height:38, borderRadius:10, background:'linear-gradient(135deg,#10b981,#059669)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', flexShrink:0 }}>
+                <Video size={18} />
+              </div>
+              <div>
+                <div style={{ fontWeight:700, fontSize:13.5, color:'var(--text)' }}>
+                  You have {sessionCount} live mentor session{sessionCount > 1 ? 's' : ''} available!
+                </div>
+                <div style={{ fontSize:11.5, color:'var(--text-3)' }}>
+                  Scheduled by company mentors with active Google Meet links and real-time chat.
+                </div>
+              </div>
+            </div>
+            <Link to="/portal/student"
+              style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:10, background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', fontWeight:700, fontSize:12.5, textDecoration:'none', boxShadow:'0 3px 12px rgba(16,185,129,0.35)' }}>
+              Open in Student Portal →
+            </Link>
+          </div>
+        )}
+
         {/* Filters */}
         <div style={{ display:'flex', gap:9, flexWrap:'wrap', marginBottom:28 }}>
           <div style={{ position:'relative', flex:'1 1 260px' }}>

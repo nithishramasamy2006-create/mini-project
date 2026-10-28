@@ -90,7 +90,7 @@ export default function ProjectsPage() {
 
   const filtered = useMemo(() => {
     let list = projects.filter(p => {
-      if (dQ && !p.title.toLowerCase().includes(dQ.toLowerCase()) && !p.company.toLowerCase().includes(dQ.toLowerCase()) && !p.skills.some(s => s.toLowerCase().includes(dQ.toLowerCase()))) return false;
+      if (dQ && !(p.title || '').toLowerCase().includes(dQ.toLowerCase()) && !(p.company || '').toLowerCase().includes(dQ.toLowerCase()) && !(p.skills || []).some(s => (s || '').toLowerCase().includes(dQ.toLowerCase()))) return false;
       if (cat !== 'all' && p.category !== cat) return false;
       if (diff !== 'All Levels' && p.difficulty !== diff) return false;
       if (ppo && !p.ppo) return false;

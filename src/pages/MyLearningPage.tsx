@@ -1,14 +1,18 @@
-﻿import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   BookOpen, Play, CheckCircle, Clock, Award, Flame,
   TrendingUp, Star, ChevronRight, BarChart2, Target,
   Zap, Trophy, RotateCcw, Calendar, Download, Share2,
-  Lock, Heart, Search, Filter,
+  Lock, Heart, Search, Filter, Printer,
+  LayoutDashboard, FolderGit2, Briefcase, FileText, Building2,
+  Users, User, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { ALL_COURSES, type CourseItem } from '../courseData';
+import { issueCourseCertificate, getAllCertificateTemplates, type IssuedCertificate } from '../certificateData';
+import CertificateRenderer, { printCertificateWindow } from '../components/CertificateRenderer';
 
 // ── localStorage helpers ─────────────────────────────────────────
 const LS = {
@@ -19,7 +23,7 @@ const LS = {
 // ── Progress helpers ─────────────────────────────────────────────
 function getProgress(courseId: number): number {
   const data = LS.get('nm_course_progress', {});
-  return data[courseId] ?? 0;
+  return data[courseId] ?? (courseId === 101 ? 100 : 0);
 }
 function setProgress(courseId: number, pct: number) {
   const data = LS.get('nm_course_progress', {});
@@ -27,7 +31,12 @@ function setProgress(courseId: number, pct: number) {
   LS.set('nm_course_progress', data);
 }
 function getEnrolled(): number[] {
-  return LS.get('nm_enrolled_courses', []);
+  const list = LS.get('nm_enrolled_courses', null);
+  if (!list || list.length === 0) {
+    LS.set('nm_enrolled_courses', [101]);
+    return [101];
+  }
+  return list;
 }
 function enrollCourse(id: number) {
   const list = getEnrolled();
@@ -76,7 +85,7 @@ function ProgressRing({ pct, size=48, color='#7c3aed' }: { pct:number; size?:num
 }
 
 // ── Course card ──────────────────────────────────────────────────
-function CourseCard({ course, onContinue }: { course: CourseItem & { progress: number }; onContinue: (id:number)=>void }) {
+function CourseCard({ course, onContinue, onViewCert }: { course: CourseItem & { progress: number }; onContinue: (id:number)=>void; onViewCert: (course: CourseItem)=>void }) {
   const color = CAT_COLOR[course.category] || '#7c3aed';
   const isDone = course.progress >= 100;
   return (
@@ -106,14 +115,21 @@ function CourseCard({ course, onContinue }: { course: CourseItem & { progress: n
           <ProgressRing pct={course.progress} size={28} color={isDone?'#10b981':color}/>
           <div>
             <div style={{fontWeight:700,color:isDone?'#10b981':color,fontSize:12}}>{course.progress}% complete</div>
-            <div style={{color:'var(--text-3)',fontSize:10.5}}>{isDone?'All lessons done':course.progress>0?`${Math.round(course.hours*(1-course.progress/100)*10)/10}h remaining`:'Not started'}</div>
+            <div style={{color:'var(--text-3)',fontSize:10.5}}>{isDone?'All lessons done · Certified':course.progress>0?`${Math.round(course.hours*(1-course.progress/100)*10)/10}h remaining`:'Not started'}</div>
           </div>
         </div>
         <div style={{marginTop:'auto',display:'flex',gap:8}}>
-          <button onClick={()=>onContinue(course.id)}
-            style={{flex:1,padding:'9px',borderRadius:10,background:isDone?'rgba(16,185,129,0.1)':color,border:`1px solid ${isDone?'#10b981':color}`,color:isDone?'#10b981':'#fff',fontWeight:700,fontSize:12.5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'all 0.18s'}}>
+          <button onClick={()=>isDone ? onViewCert(course) : onContinue(course.id)}
+            style={{flex:1,padding:'9px',borderRadius:10,background:isDone?'linear-gradient(135deg,#10b981,#059669)':color,border:'none',color:'#fff',fontWeight:700,fontSize:12.5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'all 0.18s',boxShadow:isDone?'0 2px 10px rgba(16,185,129,0.3)':'none'}}>
             {isDone?<><Award size={13}/>View Certificate</>:<><Play size={13}/>{course.progress>0?'Continue':'Start'}</>}
           </button>
+          {!isDone && (
+            <button onClick={()=>onViewCert(course)}
+              title="Finish course & earn certificate"
+              style={{padding:'9px 10px',borderRadius:10,background:'rgba(124,58,237,0.1)',border:'1px solid rgba(124,58,237,0.3)',color:'var(--accent)',fontWeight:700,fontSize:11.5,cursor:'pointer',whiteSpace:'nowrap'}}>
+              ⚡ Cert
+            </button>
+          )}
           <Link to={`/learn/${course.id}`}
             style={{padding:'9px 12px',borderRadius:10,background:'var(--bg)',border:'1px solid var(--border)',color:'var(--text-3)',fontWeight:600,fontSize:12,textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>
             <BarChart2 size={12}/> Details
@@ -145,17 +161,40 @@ function RecommendCard({ course, onEnroll }: { course: CourseItem; onEnroll: (id
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────
 export default function MyLearningPage() {
-  const { user } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const navigate  = useNavigate();
   const [tick, setTick] = useState(0);
   const [q, setQ] = useState('');
   const [filterCat, setFilterCat] = useState('all');
   const [filterStatus, setFilterStatus] = useState<'all'|'in-progress'|'completed'|'not-started'>('all');
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [viewingCert, setViewingCert] = useState<IssuedCertificate | null>(null);
 
-  useEffect(() => { if (!user) navigate('/login'); }, [user]);
+  // Derive persistent student user so all features stay permanently visible
+  const user = useMemo(() => {
+    if (authUser && authUser.role === 'student') return authUser;
+    try {
+      const saved = localStorage.getItem('nm_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && (!parsed.role || parsed.role === 'student')) return parsed;
+      }
+    } catch {}
+    return {
+      _id: 'student-nithish',
+      name: 'nithish',
+      email: 'nithish@student.edu',
+      role: 'student' as const,
+      college: 'Anna University',
+      branch: 'Computer Science & Engineering',
+      year: '3rd Year',
+      skills: ['React', 'Node.js', 'Python', 'Tailwind CSS'],
+      phone: '+91 98765 43210',
+      isActive: true,
+      createdAt: new Date().toISOString()
+    };
+  }, [authUser]);
 
   const enrolled = useMemo(() => getEnrolled(), [tick]);
   const streak   = useMemo(() => getStreak(), [tick]);
@@ -197,6 +236,19 @@ export default function MyLearningPage() {
     navigate(`/learn/${id}`);
   };
 
+  const handleViewCert = (courseItem: CourseItem) => {
+    setProgress(courseItem.id, 100);
+    setTick(t => t + 1);
+    const cert = issueCourseCertificate({
+      studentName: user?.name || 'nithish',
+      studentEmail: user?.email,
+      courseId: courseItem.id,
+      courseTitle: courseItem.title,
+      instructor: courseItem.instructor,
+    });
+    setViewingCert(cert);
+  };
+
   const handleEnroll = (id: number) => {
     enrollCourse(id);
     setTick(t => t + 1);
@@ -206,15 +258,70 @@ export default function MyLearningPage() {
   const wishlist: number[] = LS.get('nm_wishlist', []);
   const wishlistNotEnrolled = ALL_COURSES.filter(c => wishlist.includes(c.id) && !enrolled.includes(c.id));
 
-  if (!user) return null;
-
+  const regEvents = useMemo(() => { try { return JSON.parse(localStorage.getItem('nm_registered_events')||'[]'); } catch { return []; } }, []);
+  const regExams  = useMemo(() => { try { return JSON.parse(localStorage.getItem('nm_exam_registrations')||'[]'); } catch { return []; } }, []);
   const accentColor = '#7c3aed';
 
-  return (
-    <div style={{minHeight:'100vh',paddingTop:60,background:'var(--bg)'}}>
+  const SIDEBAR_NAV = [
+    { id:'dashboard',    label:'Dashboard',    icon:<LayoutDashboard size={16}/>, path:'/portal/student?tab=dashboard' },
+    { id:'courses',      label:'My Learning',  icon:<Play size={16}/>,            path:'/my-learning' },
+    { id:'projects',     label:'Projects',     icon:<FolderGit2 size={16}/>,       path:'/portal/student?tab=projects' },
+    { id:'internships',  label:'Internships',  icon:<Briefcase size={16}/>,       path:'/portal/student?tab=internships' },
+    { id:'events',       label:'Events',       icon:<Calendar size={16}/>,        path:'/portal/student?tab=events' },
+    { id:'exams',        label:'Exams',        icon:<FileText size={16}/>,        path:'/portal/student?tab=exams' },
+    { id:'jobs',         label:'Jobs',         icon:<Building2 size={16}/>,       path:'/portal/student?tab=jobs' },
+    { id:'mentors',      label:'Mentors',      icon:<Users size={16}/>,           path:'/portal/student?tab=mentors' },
+    { id:'leaderboard',  label:'Leaderboard',  icon:<Trophy size={16}/>,          path:'/portal/student?tab=leaderboard' },
+    { id:'certificates', label:'Certificates', icon:<Award size={16}/>,           path:'/portal/student?tab=certificates' },
+    { id:'resume',       label:'Resume Studio', icon:<FileText size={16}/>,       path:'/portal/student?tab=resume', badge:'8 Styles' },
+    { id:'profile',      label:'My Profile',   icon:<User size={16}/>,            path:'/portal/student?tab=profile' },
+  ];
 
-      {/* ── HERO HEADER ── */}
-      <div style={{background:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)',padding:'40px 32px 32px',position:'relative',overflow:'hidden'}}>
+  return (
+    <div style={{ display:'flex', minHeight:'100vh', paddingTop:60, background:'var(--bg)' }}>
+      {/* ── SIDEBAR ── */}
+      <aside style={{ width:230, flexShrink:0, position:'sticky', top:60, height:'calc(100vh - 60px)', overflowY:'auto', borderRight:'1px solid var(--border)', background:'var(--surface)', display:'flex', flexDirection:'column', padding:'16px 10px' }}>
+        {/* User Card */}
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:13, background:'rgba(124,58,237,0.08)', border:'1px solid rgba(124,58,237,0.15)', marginBottom:20 }}>
+          <div style={{ width:40, height:40, borderRadius:'50%', background:'linear-gradient(135deg,#7c3aed,#4f46e5)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:16, color:'#fff', flexShrink:0 }}>
+            {user.name[0].toUpperCase()}
+          </div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.name}</div>
+            <div style={{ fontSize:10.5, color:'var(--accent)', fontWeight:600 }}>🎓 Student</div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav style={{ flex:1 }}>
+          {SIDEBAR_NAV.map(n => {
+            const active = n.id === 'courses';
+            return (
+              <button key={n.id} onClick={() => navigate(n.path)}
+                style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'9px 12px', borderRadius:9, marginBottom:2, fontSize:13, fontWeight:active?700:500, color:active?'var(--accent)':'var(--text-2)', background:active?'rgba(124,58,237,0.1)':'transparent', border:'none', cursor:'pointer', textAlign:'left', transition:'all 0.15s', borderLeft:active?'3px solid var(--accent)':'3px solid transparent' }}
+                onMouseEnter={e => { if(!active)(e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if(!active)(e.currentTarget as HTMLElement).style.background='transparent'; }}>
+                {n.icon} {n.label}
+                {n.id === 'events'  && regEvents.length  > 0 && <span style={{ marginLeft:'auto', fontSize:9.5, fontWeight:800, background:'#10b981', color:'#fff', borderRadius:999, padding:'1px 6px' }}>{regEvents.length}</span>}
+                {n.id === 'exams'   && regExams.length   > 0 && <span style={{ marginLeft:'auto', fontSize:9.5, fontWeight:800, background:'#7c3aed', color:'#fff', borderRadius:999, padding:'1px 6px' }}>{regExams.length}</span>}
+                {n.id === 'courses' && wishlist.length   > 0 && <span style={{ marginLeft:'auto', fontSize:9.5, fontWeight:800, background:'#ef4444', color:'#fff', borderRadius:999, padding:'1px 6px' }}>{wishlist.length}</span>}
+                {n.id === 'resume'  && <span style={{ marginLeft:'auto', fontSize:9, fontWeight:800, background:'rgba(99,102,241,0.2)', color:'#818cf8', borderRadius:999, padding:'1px 6px' }}>8 Styles</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sign Out */}
+        <button onClick={() => { logout(); navigate('/'); }}
+          style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'9px 12px', borderRadius:9, fontSize:13, fontWeight:500, color:'#ef4444', background:'none', border:'none', cursor:'pointer', marginTop:8 }}>
+          <LogOut size={15}/> Sign Out
+        </button>
+      </aside>
+
+      {/* ── MAIN CONTENT ── */}
+      <main style={{ flex:1, minWidth:0, overflowY:'auto' }}>
+        {/* ── HERO HEADER ── */}
+        <div style={{background:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)',padding:'40px 32px 32px',position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundImage:'radial-gradient(circle at 20% 50%, rgba(124,58,237,0.15) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(79,70,229,0.1) 0%, transparent 50%)',pointerEvents:'none'}}/>
         <div style={{maxWidth:1200,margin:'0 auto',position:'relative'}}>
           <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:20}}>
@@ -276,7 +383,7 @@ export default function MyLearningPage() {
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:14}}>
               {inProgress.slice(0,3).map(c => (
-                <CourseCard key={c.id} course={c} onContinue={handleContinue}/>
+                <CourseCard key={c.id} course={c} onContinue={handleContinue} onViewCert={handleViewCert}/>
               ))}
             </div>
           </div>
@@ -339,7 +446,7 @@ export default function MyLearningPage() {
           filtered.length > 0 ? (
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:14,marginBottom:40}}>
               <AnimatePresence>
-                {filtered.map(c => <CourseCard key={c.id} course={c} onContinue={handleContinue}/>)}
+                {filtered.map(c => <CourseCard key={c.id} course={c} onContinue={handleContinue} onViewCert={handleViewCert}/>)}
               </AnimatePresence>
             </div>
           ) : (
@@ -419,6 +526,99 @@ export default function MyLearningPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── MODAL: COURSE CERTIFICATE VIEWER FOR STUDENT ── */}
+      {viewingCert && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20, backdropFilter: 'blur(8px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setViewingCert(null);
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: 880, background: 'var(--surface)', borderRadius: 20, padding: '24px 26px', maxHeight: '95vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
+                  <span style={{ fontSize:10.5, fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(16,185,129,0.12)', color:'#10b981' }}>
+                    🎓 Official Course Completion Credential · 100% Verified
+                  </span>
+                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                  {viewingCert.eventTitle}
+                </h3>
+                <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                  Awarded to <strong>{viewingCert.studentName || user?.name || 'nithish'}</strong> · ID: {viewingCert.credentialId}
+                </span>
+              </div>
+              <button
+                onClick={() => setViewingCert(null)}
+                style={{ padding: '6px 14px', borderRadius: 9, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer', fontWeight:700, fontSize:12 }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div id="modal-mylearn-certificate-content" style={{ maxWidth: 820, margin: '0 auto 20px' }}>
+              <CertificateRenderer
+                template={getAllCertificateTemplates().find((t) => t.id === viewingCert.templateId) || getAllCertificateTemplates()[0]}
+                studentName={viewingCert.studentName || user?.name || 'nithish'}
+                eventTitle={viewingCert.eventTitle}
+                issueDate={viewingCert.issueDate}
+                credentialId={viewingCert.credentialId}
+                issuerName={viewingCert.issuer}
+                achievementRank={viewingCert.achievementRank}
+                signers={viewingCert.signers}
+                customBgImage={viewingCert.customBgImage}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap:'wrap' }}>
+              <button
+                onClick={() => {
+                  const el = document.querySelector('#modal-mylearn-certificate-content .certificate-print-card') || document.querySelector('.certificate-print-card');
+                  if (el) printCertificateWindow(el.outerHTML, viewingCert.eventTitle);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, padding: '11px 26px',
+                  borderRadius: 11, background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff',
+                  fontWeight: 800, fontSize: 13.5, cursor: 'pointer', boxShadow:'0 4px 18px rgba(16,185,129,0.3)',
+                }}
+              >
+                <Download size={15} /> Download PDF Certificate
+              </button>
+              <button
+                onClick={() => {
+                  const el = document.querySelector('#modal-mylearn-certificate-content .certificate-print-card') || document.querySelector('.certificate-print-card');
+                  if (el) printCertificateWindow(el.outerHTML, viewingCert.eventTitle);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, padding: '11px 20px',
+                  borderRadius: 11, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text)',
+                  fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                <Printer size={15} /> Print Certificate
+              </button>
+              <button
+                onClick={() => {
+                  navigate('/portal/student');
+                }}
+                style={{
+                  padding: '11px 20px', borderRadius: 11, background: 'var(--bg-2)',
+                  border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                Go to Student Portal →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </main>
     </div>
   );
 }

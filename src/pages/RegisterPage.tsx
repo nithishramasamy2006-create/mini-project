@@ -74,8 +74,8 @@ export default function RegisterPage() {
 
       login(data.user, data.token);
       // Role-based redirect
-      const redirect = { student: '/', company: '/portal/company', college: '/portal/college', admin: '/portal/admin' };
-      navigate(redirect[data.user.role as keyof typeof redirect] || '/');
+      const redirect = { student: '/portal/student', company: '/portal/company', college: '/portal/college', admin: '/portal/admin' };
+      navigate(redirect[data.user.role as keyof typeof redirect] || '/portal/student');
     } catch {
       setError('Cannot connect to server. Make sure the backend is running.');
       setLoading(false);

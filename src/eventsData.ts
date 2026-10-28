@@ -4,6 +4,7 @@
 
 export type EventType = 'hackathon' | 'workshop' | 'webinar' | 'bootcamp' | 'career-fair' | 'competition' | 'conference' | 'guest-lecture';
 export type EventMode = 'online' | 'offline' | 'hybrid';
+export type OrganizerType = 'company' | 'college' | 'government';
 
 export interface Speaker {
   name: string;
@@ -19,6 +20,9 @@ export interface Event {
   type: EventType;
   category: string;        // domain tag
   organizer: string;
+  organizerType?: OrganizerType; // 'company' | 'college' | 'government'
+  mentorName?: string;     // Evaluating mentor or faculty coordinator
+  mentorRole?: string;     // Lead mentor's designation
   organizerLogo: string;   // emoji
   date: string;            // "Jan 15, 2025"
   endDate?: string;        // for multi-day events
@@ -457,6 +461,36 @@ function _coerce(raw: any): Event {
       : seats;
   const priceRaw  = String(raw.price || 'Free');
   const price     = priceRaw === 'FREE' ? 'Free' : priceRaw;
+
+  // Deduce organizerType if not provided
+  let organizerType: OrganizerType = raw.organizerType || 'company';
+  const orgLow = String(raw.organizer || '').toLowerCase();
+  if (
+    orgLow.includes('college') ||
+    orgLow.includes('university') ||
+    orgLow.includes('iit') ||
+    orgLow.includes('psg') ||
+    orgLow.includes('thiagarajar') ||
+    orgLow.includes('aicte') ||
+    orgLow.includes('tnau') ||
+    orgLow.includes('campus')
+  ) {
+    organizerType = 'college';
+  } else if (
+    orgLow.includes('govt') ||
+    orgLow.includes('government') ||
+    orgLow.includes('naanmudhalvan') ||
+    orgLow.includes('tnsdc') ||
+    orgLow.includes('isro')
+  ) {
+    organizerType = 'government';
+  } else {
+    organizerType = 'company';
+  }
+
+  const mentorName = raw.mentorName || (raw.speakers && raw.speakers[0]?.name) || (organizerType === 'company' ? `${raw.organizer || 'Corporate'} Lead Mentor` : 'Academic Faculty Coordinator');
+  const mentorRole = raw.mentorRole || (raw.speakers && raw.speakers[0]?.role ? `${raw.speakers[0].role}` : organizerType === 'company' ? 'Industry Mentor & Evaluator' : 'Faculty Mentor & Head of Event');
+
   return {
     ...raw,
     type:                 (_TYPE_MAP[typeKey] ?? 'workshop') as EventType,
@@ -466,7 +500,10 @@ function _coerce(raw: any): Event {
     price,
     category:             raw.category             || 'General',
     organizer:            raw.organizer            || 'Organizer',
-    organizerLogo:        raw.organizerLogo        || '🎪',
+    organizerType,
+    mentorName,
+    mentorRole,
+    organizerLogo:        raw.organizerLogo        || (organizerType === 'company' ? '🏢' : organizerType === 'college' ? '🏛️' : '⚡'),
     date:                 raw.date                 || '',
     endDate:              raw.endDate,
     time:                 raw.time                 || 'TBD',

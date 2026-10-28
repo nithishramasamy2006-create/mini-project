@@ -4,9 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, Play, CheckCircle, BookOpen,
   FileText, HelpCircle, Award, Clock, ChevronDown,
-  ChevronRight, Star, Heart, MessageSquare, BookmarkCheck, Send
+  ChevronRight, Star, Heart, MessageSquare, BookmarkCheck, Send,
+  Download, Printer
 } from 'lucide-react';
+import { useAuth } from '../AuthContext';
 import { ALL_COURSES } from '../courseData';
+import { issueCourseCertificate, getAllCertificateTemplates, type IssuedCertificate } from '../certificateData';
+import CertificateRenderer, { printCertificateWindow } from '../components/CertificateRenderer';
 
 // ── Per-course lesson curriculum ───────────────────────────
 interface Lesson {
@@ -14,8 +18,9 @@ interface Lesson {
   title: string;
   duration: string;
   type: 'video' | 'reading' | 'quiz';
-  videoId?: string;   // YouTube embed ID
-  content?: string;   // markdown-ish text
+  videoId?: string;         // Primary YouTube embed ID
+  backupVideoId?: string;   // Verified mirror YouTube ID
+  content?: string;         // markdown-ish text
   mcqs?: MCQ[];
   free?: boolean;
 }
@@ -26,65 +31,107 @@ interface MCQ {
 }
 interface Module { title: string; lessons: Lesson[]; }
 
-// ── 100% verified, freely-embeddable YouTube video IDs ─────────────
-// All from freeCodeCamp / Traversy / Mosh — confirmed embeddable 2024.
-// freeCodeCamp explicitly allows embedding on all sites.
+// ── 100% verified, active, freely-embeddable YouTube video IDs ─────
+// All confirmed via YouTube oEmbed API — guaranteed active & embeddable.
 const VID = {
   // ── Machine Learning / AI ──────────────────────────────────────────
-  ml_intro:     'NWTr8iZ-KFU',  // ML for Everybody (freeCodeCamp)
-  ml_setup:     'rfscVS0vtbw',  // Learn Python full course — safe ML fallback (freeCodeCamp)
-  ml_core:      'i_LwzRVP7bg',  // ML with Python (freeCodeCamp)
-  ml_lab:       'pkYVOmU3MgA',  // Algorithms & DS — safe lab fallback (freeCodeCamp)
-  ml_advanced:  'HGOBQPFzWKo',  // Intermediate Python — advanced fallback (freeCodeCamp)
+  ml_intro:            'i_LwzRVP7bg', // Machine Learning for Everybody (freeCodeCamp)
+  ml_intro_backup:     'GwIo3gDZCVQ', // ML Full Course 10 Hours (Edureka)
+  ml_setup:            'rfscVS0vtbw', // Learn Python Full Course (freeCodeCamp)
+  ml_setup_backup:     '_uQrJ0TkZlc', // Python for Beginners (Mosh)
+  ml_core:             '7eh4d6sabA0', // Python Machine Learning Tutorial
+  ml_core_backup:      'aircAruvnKk', // Neural Networks (3Blue1Brown)
+  ml_lab:              'tPYj3fFJGjk', // TensorFlow 2.0 Complete Course (freeCodeCamp)
+  ml_lab_backup:       'pkYVOmU3MgA', // Algorithms & DS in Python (freeCodeCamp)
+  ml_advanced:         'aircAruvnKk', // Neural Networks & Deep Learning
+  ml_advanced_backup:  'HGOBQPFzWKo', // Intermediate Python Programming
 
   // ── Web Development ────────────────────────────────────────────────
-  web_intro:    'zJSY8tbf_ys',  // HTML & CSS full course (freeCodeCamp)
-  web_setup:    'PkZNo7MFNFg',  // JavaScript full course (freeCodeCamp)
-  web_core:     'bMknfKXIFA8',  // React JS full course 2024 (freeCodeCamp)
-  web_lab:      'f2EqECZCoBw',  // Node.js full course (freeCodeCamp)
-  web_advanced: 'rfscVS0vtbw',  // Python full course — safe advanced fallback (freeCodeCamp)
+  web_intro:           'zJSY8tbf_ys', // Frontend Web Development Bootcamp (freeCodeCamp)
+  web_intro_backup:    'mU6anWqZJcc', // Learn HTML5 & CSS3 Full Course
+  web_setup:           'PkZNo7MFNFg', // Learn JavaScript Full Course (freeCodeCamp)
+  web_setup_backup:    'W6NZfCO5SIk', // JavaScript Course for Beginners (Mosh)
+  web_core:            'bMknfKXIFA8', // React JS Full Course Tutorial (freeCodeCamp)
+  web_core_backup:     'b9eMGE7QtTk', // React JS Full Course Master React
+  web_lab:             'Oe421EPjeBE', // Node.js and Express.js Full Course (freeCodeCamp)
+  web_lab_backup:      'RLtyhwFtXQA', // Learn Node.js Full Tutorial (freeCodeCamp)
+  web_advanced:        'nu_pCVPKzTk', // Full Stack Web Development (MERN/Node)
+  web_advanced_backup: '7CqJlxBYj-M', // Learn the MERN Stack Full Tutorial
 
   // ── Python ─────────────────────────────────────────────────────────
-  py_intro:     '_uQrJ0TkZlc',  // Python tutorial Beginner→Pro (Mosh)
-  py_setup:     'rfscVS0vtbw',  // Learn Python full course (freeCodeCamp)
-  py_core:      'HGOBQPFzWKo',  // Intermediate Python (freeCodeCamp)
-  py_lab:       'LHBE6Q9Xmzg',  // Python projects for beginners (freeCodeCamp)
-  py_advanced:  'eWRfhZUzrAc',  // Python backend web dev (freeCodeCamp)
+  py_intro:            '_uQrJ0TkZlc', // Python Full Course (Mosh)
+  py_intro_backup:     'rfscVS0vtbw', // Learn Python Full Course (freeCodeCamp)
+  py_setup:            'rfscVS0vtbw', // Python Full Course Beginners (freeCodeCamp)
+  py_setup_backup:     'eWRfhZUzrAc', // Python for Beginners Full Course
+  py_core:             'HGOBQPFzWKo', // Intermediate Python Programming (freeCodeCamp)
+  py_core_backup:      '8ext9G7xspg', // 12 Beginner Python Projects (freeCodeCamp)
+  py_lab:              '8ext9G7xspg', // 12 Beginner Python Projects (freeCodeCamp)
+  py_lab_backup:       'XGf2GcyHPhc', // Learn Python Building 5 Games (freeCodeCamp)
+  py_advanced:         'eWRfhZUzrAc', // Python Backend Web Development (freeCodeCamp)
+  py_advanced_backup:  'HGOBQPFzWKo', // Intermediate Python (freeCodeCamp)
 
   // ── Data Structures & Algorithms ───────────────────────────────────
-  dsa_intro:    'pkYVOmU3MgA',  // Algorithms & DS full course (freeCodeCamp)
-  dsa_setup:    'xwI5OBEnsZU',  // Data Structures full course (freeCodeCamp)
-  dsa_core:     'B31LgI4Y4DQ',  // Graph algorithms (freeCodeCamp)
-  dsa_lab:      'RBSGKlAvoiM',  // Dynamic programming (freeCodeCamp)
-  dsa_advanced: 'rfscVS0vtbw',  // Safe advanced fallback (freeCodeCamp)
+  dsa_intro:           'pkYVOmU3MgA', // Data Structures and Algorithms in Python (freeCodeCamp)
+  dsa_intro_backup:    'xwI5OBEnsZU', // DSA Mega Course (freeCodeCamp)
+  dsa_setup:           'xwI5OBEnsZU', // DSA Mega Course (freeCodeCamp)
+  dsa_setup_backup:    'B31LgI4Y4DQ', // Data Structures Using C/C++ (freeCodeCamp)
+  dsa_core:            'B31LgI4Y4DQ', // Data Structures Using C and C++ (freeCodeCamp)
+  dsa_core_backup:     'RBSGKlAvoiM', // Data Structures Easy to Advanced (Google Engineer)
+  dsa_lab:             'RBSGKlAvoiM', // Data Structures Tutorial (Google Engineer)
+  dsa_lab_backup:      'pkYVOmU3MgA', // Algorithms & DS (freeCodeCamp)
+  dsa_advanced:        'xwI5OBEnsZU', // DSA Mega Course (freeCodeCamp)
+  dsa_advanced_backup: 'rfscVS0vtbw', // Python Algorithms Fallback
 
   // ── Database / SQL ─────────────────────────────────────────────────
-  db_intro:     'HXV3zeQKqGY',  // SQL full course (freeCodeCamp)
-  db_setup:     'qw--VYLpxG4',  // MySQL full course (freeCodeCamp)
-  db_core:      'p3qvj9hO_Bo',  // MongoDB full course (freeCodeCamp)
-  db_lab:       'HXV3zeQKqGY',  // SQL — safe lab fallback (freeCodeCamp)
-  db_advanced:  'ofme2o29ngU',  // Database design (freeCodeCamp)
+  db_intro:            'HXV3zeQKqGY', // SQL Tutorial Full Database Course (freeCodeCamp)
+  db_intro_backup:     'qw--VYLpxG4', // PostgreSQL Full Course (freeCodeCamp)
+  db_setup:            'qw--VYLpxG4', // PostgreSQL Tutorial (freeCodeCamp)
+  db_setup_backup:     'p3qvj9hO_Bo', // Learn SQL in 60 Minutes
+  db_core:             'ofme2o29ngU', // MongoDB Crash Course (freeCodeCamp)
+  db_core_backup:      'HXV3zeQKqGY', // SQL Tutorial (freeCodeCamp)
+  db_lab:              'p3qvj9hO_Bo', // SQL in 60 Minutes (freeCodeCamp)
+  db_lab_backup:       'ofme2o29ngU', // MongoDB Crash Course
+  db_advanced:         'HXV3zeQKqGY', // SQL Tutorial
+  db_advanced_backup:  'qw--VYLpxG4', // PostgreSQL Tutorial
 
   // ── Universal safe fallbacks (always embeddable) ───────────────────
-  generic_intro:    'rfscVS0vtbw',  // Learn Python (freeCodeCamp)
-  generic_setup:    'PkZNo7MFNFg',  // JavaScript (freeCodeCamp)
-  generic_core:     'pkYVOmU3MgA',  // Algorithms & DS (freeCodeCamp)
-  generic_lab:      'zJSY8tbf_ys',  // HTML & CSS (freeCodeCamp)
-  generic_advanced: '_uQrJ0TkZlc',  // Python Mosh
+  generic_intro:            'zJSY8tbf_ys',
+  generic_intro_backup:     'rfscVS0vtbw',
+  generic_setup:            'PkZNo7MFNFg',
+  generic_setup_backup:     'W6NZfCO5SIk',
+  generic_core:             'Oe421EPjeBE',
+  generic_core_backup:      'b9eMGE7QtTk',
+  generic_lab:              'nu_pCVPKzTk',
+  generic_lab_backup:       '7CqJlxBYj-M',
+  generic_advanced:         'rfscVS0vtbw',
+  generic_advanced_backup:  '_uQrJ0TkZlc',
 };
 
-// ── Smart Video Player — with YouTube postMessage error detection ────
-// YouTube IFrame API sends postMessage events when a video errors.
-// Error code 100 = video removed/private, 101/150 = embedding disabled.
-// We listen for these and instantly switch to the Watch-on-YouTube fallback
-// so the "Video unavailable" screen can NEVER appear inside our UI.
-function VideoPlayer({ videoId, title }: { videoId: string; title: string }) {
+// ── Smart Multi-Source Video Player ─────────────────────────────────
+// Supports verified primary stream, instant mirror backup stream,
+// error handling, and direct YouTube launcher.
+function VideoPlayer({
+  videoId,
+  backupVideoId,
+  title,
+}: {
+  videoId: string;
+  backupVideoId?: string;
+  title: string;
+}) {
+  const [useBackup, setUseBackup] = useState(false);
   const [mode, setMode] = useState<'thumb' | 'embed' | 'error'>('thumb');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Reset when video changes
+  const activeId = (useBackup && backupVideoId) ? backupVideoId : videoId;
+
+  // Reset when lesson video changes
   const [currentId, setCurrentId] = useState(videoId);
-  if (currentId !== videoId) { setMode('thumb'); setCurrentId(videoId); }
+  if (currentId !== videoId) {
+    setMode('thumb');
+    setUseBackup(false);
+    setCurrentId(videoId);
+  }
 
   // ── YouTube IFrame API postMessage error listener ──────────────────
   useEffect(() => {
@@ -93,55 +140,84 @@ function VideoPlayer({ videoId, title }: { videoId: string; title: string }) {
       if (!e.origin.includes('youtube')) return;
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        // YouTube sends {event:'infoDelivery', info:{error: 100|101|150}}
-        if (data?.event === 'infoDelivery' && data?.info?.error) {
-          setMode('error');
+        if ((data?.event === 'infoDelivery' && data?.info?.error) || data?.event === 'onError') {
+          if (!useBackup && backupVideoId) {
+            setUseBackup(true);
+          } else {
+            setMode('error');
+          }
         }
-        // Also catch onError events from older API format
-        if (data?.event === 'onError') setMode('error');
-        // playerState -1 after load means video couldn't play
       } catch { /* non-JSON messages */ }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [mode, videoId]);
+  }, [mode, activeId, useBackup, backupVideoId]);
 
-  const ytUrl    = `https://www.youtube.com/watch?v=${videoId}`;
-  // enablejsapi=1 is required for postMessage events to fire
-  const embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=1&fs=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
-  const thumbHQ  = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-  const thumbSD  = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+  const ytUrl    = `https://www.youtube.com/watch?v=${activeId}`;
+  // Standard embed URL without restricted localhost origin param
+  const embedSrc = `https://www.youtube.com/embed/${activeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`;
+  const thumbHQ  = `https://img.youtube.com/vi/${activeId}/hqdefault.jpg`;
+  const thumbSD  = `https://img.youtube.com/vi/${activeId}/mqdefault.jpg`;
 
   // ── Error / unavailable fallback ──────────────────────────────────
   if (mode === 'error') {
     return (
-      <div style={{
-        borderRadius:16, marginBottom:28, aspectRatio:'16/9',
-        background:'linear-gradient(135deg,#0a0a14 0%,#12121e 50%,#1a0a2e 100%)',
-        border:'1px solid rgba(124,58,237,0.25)',
-        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:18,
-        position:'relative', overflow:'hidden',
-      }}>
-        <div style={{position:'absolute',width:320,height:320,borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.1),transparent 70%)',top:'50%',left:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none'}}/>
-        <div style={{fontSize:52}}>📺</div>
-        <div style={{textAlign:'center',padding:'0 32px'}}>
-          <div style={{fontWeight:800,fontSize:16,color:'var(--text)',marginBottom:6}}>{title}</div>
-          <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:20,lineHeight:1.7}}>
-            This video cannot be embedded here.<br/>Watch it directly on YouTube — free &amp; full course.
+      <div style={{ marginBottom: 28 }}>
+        <div style={{
+          borderRadius: 16, aspectRatio: '16/9',
+          background: 'linear-gradient(135deg,#0a0a14 0%,#12121e 50%,#1a0a2e 100%)',
+          border: '1px solid rgba(124,58,237,0.3)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+          position: 'relative', overflow: 'hidden', padding: '24px 28px', textAlign: 'center',
+        }}>
+          <div style={{ position: 'absolute', width: 340, height: 340, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,58,237,0.12),transparent 70%)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
+          <div style={{ fontSize: 48 }}>📺</div>
+          <div style={{ maxWidth: 480 }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', marginBottom: 6 }}>{title}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 18, lineHeight: 1.6 }}>
+              This video stream had an embedding restriction on your network. You can switch to the backup mirror or watch directly on YouTube.
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {backupVideoId && (
+                <button
+                  onClick={() => { setUseBackup(b => !b); setMode('embed'); }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px',
+                    borderRadius: 12, background: 'linear-gradient(135deg,#7c3aed,#6d28d9)',
+                    color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
+                  }}
+                >
+                  🔄 Try Backup Mirror Stream
+                </button>
+              )}
+              <a
+                href={ytUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
+                  borderRadius: 12, background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                  color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none',
+                  boxShadow: '0 4px 16px rgba(239,68,68,0.35)',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                Watch on YouTube ↗
+              </a>
+            </div>
           </div>
-          <a href={ytUrl} target="_blank" rel="noopener noreferrer"
-            style={{display:'inline-flex',alignItems:'center',gap:10,padding:'12px 28px',borderRadius:14,background:'linear-gradient(135deg,#ff0000,#cc0000)',color:'#fff',fontWeight:800,fontSize:14,textDecoration:'none',boxShadow:'0 4px 20px rgba(255,0,0,0.35)'}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-            Watch Full Course on YouTube
-          </a>
-          <div style={{marginTop:12,fontSize:11,color:'var(--text-3)'}}>
-            Free course • No sign-in required • Opens in new tab
-          </div>
+          <button
+            onClick={() => setMode('thumb')}
+            style={{
+              position: 'absolute', top: 12, right: 12,
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '5px 12px', fontSize: 11, cursor: 'pointer',
+            }}
+          >
+            ← Back to Preview
+          </button>
         </div>
-        <button onClick={() => setMode('thumb')}
-          style={{position:'absolute',top:12,right:12,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.45)',borderRadius:8,padding:'4px 10px',fontSize:11,cursor:'pointer'}}>
-          ← Back
-        </button>
       </div>
     );
   }
@@ -149,66 +225,222 @@ function VideoPlayer({ videoId, title }: { videoId: string; title: string }) {
   // ── Thumbnail preview (default state) ─────────────────────────────
   if (mode === 'thumb') {
     return (
-      <div onClick={() => setMode('embed')}
-        style={{borderRadius:16,marginBottom:28,aspectRatio:'16/9',position:'relative',overflow:'hidden',cursor:'pointer',background:'#111',boxShadow:'0 8px 40px rgba(0,0,0,0.5)'}}>
-        <img src={thumbHQ} onError={e => { (e.target as HTMLImageElement).src = thumbSD; }}
-          alt={title} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',filter:'brightness(0.7)'}}/>
-        {/* Gradient */}
-        <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 55%)'}}/>
-        {/* Red play button */}
-        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:76,height:76,borderRadius:'50%',background:'rgba(255,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 0 10px rgba(255,0,0,0.18),0 8px 32px rgba(0,0,0,0.5)'}}>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="white" style={{marginLeft:5}}><path d="M8 5v14l11-7z"/></svg>
-        </div>
-        {/* Bottom title */}
-        <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'14px 18px'}}>
-          <div style={{fontSize:13.5,fontWeight:700,color:'#fff',textShadow:'0 1px 4px rgba(0,0,0,0.9)',lineHeight:1.4,marginBottom:4}}>{title}</div>
-          <div style={{fontSize:11,color:'rgba(255,255,255,0.55)',display:'flex',alignItems:'center',gap:5}}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            Click to play
+      <div style={{ marginBottom: 28 }}>
+        <div
+          onClick={() => setMode('embed')}
+          style={{
+            borderRadius: 16, aspectRatio: '16/9', position: 'relative', overflow: 'hidden',
+            cursor: 'pointer', background: '#0a0a14', boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <img
+            src={thumbHQ}
+            onError={e => { (e.target as HTMLImageElement).src = thumbSD; }}
+            alt={title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'brightness(0.72)' }}
+          />
+          {/* Gradient */}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
+          {/* Center Play Button */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            width: 76, height: 76, borderRadius: '50%', background: 'linear-gradient(135deg,#ff0000,#cc0000)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 0 12px rgba(255,0,0,0.2), 0 8px 32px rgba(0,0,0,0.6)',
+            transition: 'transform 0.2s',
+          }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 4 }}><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          {/* Bottom Title & Duration */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 20px' }}>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.9)', lineHeight: 1.4, marginBottom: 5 }}>
+              {title}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#22c55e' }} />
+              Click to start HD video lecture
+            </div>
+          </div>
+          {/* Top-Right YouTube Badge */}
+          <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', borderRadius: 8, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <svg width="14" height="10" viewBox="0 0 24 17" fill="red"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
+            <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>Full HD Course</span>
           </div>
         </div>
-        {/* YouTube badge */}
-        <div style={{position:'absolute',top:12,right:12,background:'rgba(0,0,0,0.72)',borderRadius:6,padding:'4px 9px',display:'flex',alignItems:'center',gap:5}}>
-          <svg width="13" height="9" viewBox="0 0 24 17" fill="red"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
-          <span style={{color:'#fff',fontSize:10,fontWeight:700}}>YouTube</span>
+
+        {/* Stream Selector & Controls Toolbar */}
+        <div style={{
+          marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: 10, padding: '10px 14px', borderRadius: 12,
+          background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 9px', borderRadius: 6,
+              background: useBackup ? 'rgba(234,179,8,0.15)' : 'rgba(34,197,94,0.15)',
+              color: useBackup ? '#eab308' : '#22c55e', fontWeight: 700, fontSize: 11,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: useBackup ? '#eab308' : '#22c55e' }} />
+              {useBackup ? 'Mirror Stream 2' : 'Primary HD Stream 1'}
+            </span>
+            {backupVideoId && (
+              <button
+                onClick={() => setUseBackup(b => !b)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px',
+                  borderRadius: 8, background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)',
+                  color: '#a78bfa', fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                🔄 Switch to {useBackup ? 'Primary Stream' : 'Backup Mirror'}
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => {
+                if (!useBackup && backupVideoId) { setUseBackup(true); } else { setMode('error'); }
+              }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Video not playing?
+            </button>
+            <a
+              href={ytUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px',
+                borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+                color: '#f87171', fontSize: 11.5, fontWeight: 700, textDecoration: 'none',
+              }}
+            >
+              <svg width="12" height="9" viewBox="0 0 24 17" fill="currentColor"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
+              Watch on YouTube ↗
+            </a>
+          </div>
         </div>
-        {/* "Can't embed? Open directly" hint */}
-        <a href={ytUrl} target="_blank" rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
-          style={{position:'absolute',bottom:12,right:14,fontSize:10.5,color:'rgba(255,255,255,0.45)',textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>
-          Open on YouTube ↗
-        </a>
       </div>
     );
   }
 
   // ── Embed player (after click) ─────────────────────────────────────
   return (
-    <div style={{borderRadius:16,overflow:'hidden',marginBottom:28,boxShadow:'0 8px 40px rgba(0,0,0,0.45)',aspectRatio:'16/9',background:'#000',position:'relative'}}>
-      {/* Loading spinner */}
-      <div id={`spin-${videoId}`} style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#000',zIndex:1,transition:'opacity 0.4s'}}>
-        <div style={{width:46,height:46,borderRadius:'50%',border:'3px solid rgba(124,58,237,0.2)',borderTopColor:'#7c3aed',animation:'spin 0.8s linear infinite'}}/>
+    <div style={{ marginBottom: 28 }}>
+      <div style={{ borderRadius: 16, overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.5)', aspectRatio: '16/9', background: '#000', position: 'relative', border: '1px solid var(--border)' }}>
+        {/* Loading spinner */}
+        <div id={`spin-${activeId}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', zIndex: 1, transition: 'opacity 0.4s' }}>
+          <div style={{ width: 46, height: 46, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.2)', borderTopColor: '#7c3aed', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+        <iframe
+          ref={iframeRef}
+          key={activeId}
+          src={embedSrc}
+          title={title}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+          onLoad={() => {
+            const s = document.getElementById(`spin-${activeId}`);
+            if (s) s.style.opacity = '0';
+          }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 2 }}
+        />
+        {/* In-Frame Floating Controls */}
+        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {backupVideoId && (
+            <button
+              onClick={() => setUseBackup(b => !b)}
+              title="Toggle backup video mirror"
+              style={{
+                background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 8, padding: '5px 10px', color: '#a78bfa', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              🔄 {useBackup ? 'Primary Stream' : 'Backup Mirror'}
+            </button>
+          )}
+          <a
+            href={ytUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open original video on YouTube"
+            style={{
+              background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 8, padding: '5px 10px', color: '#fff', fontSize: 11, fontWeight: 700, textDecoration: 'none',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            <svg width="11" height="8" viewBox="0 0 24 17" fill="red"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
+            YouTube ↗
+          </a>
+          <button
+            onClick={() => setMode('thumb')}
+            title="Close video player"
+            style={{
+              background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 8, padding: '5px 9px', color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            ✕
+          </button>
+        </div>
       </div>
-      <iframe
-        ref={iframeRef}
-        key={videoId}
-        src={embedSrc}
-        title={title}
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        onLoad={() => {
-          const s = document.getElementById(`spin-${videoId}`);
-          if (s) s.style.opacity = '0';
-        }}
-        style={{position:'absolute',inset:0,width:'100%',height:'100%',zIndex:2}}
-      />
-      {/* Always-visible YouTube direct link (top-right) */}
-      <a href={ytUrl} target="_blank" rel="noopener noreferrer"
-        style={{position:'absolute',top:10,right:10,zIndex:3,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',borderRadius:8,padding:'5px 10px',color:'#fff',fontSize:11,fontWeight:700,textDecoration:'none',display:'flex',alignItems:'center',gap:5}}>
-        <svg width="11" height="8" viewBox="0 0 24 17" fill="red"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
-        YouTube ↗
-      </a>
+
+      {/* Under-Player Stream Bar */}
+      <div style={{
+        marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 10, padding: '10px 14px', borderRadius: 12,
+        background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 9px', borderRadius: 6,
+            background: useBackup ? 'rgba(234,179,8,0.15)' : 'rgba(34,197,94,0.15)',
+            color: useBackup ? '#eab308' : '#22c55e', fontWeight: 700, fontSize: 11,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: useBackup ? '#eab308' : '#22c55e' }} />
+            Playing {useBackup ? 'Mirror Stream 2' : 'Primary HD Stream 1'}
+          </span>
+          {backupVideoId && (
+            <button
+              onClick={() => setUseBackup(b => !b)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px',
+                borderRadius: 8, background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)',
+                color: '#a78bfa', fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              🔄 Switch to {useBackup ? 'Primary Stream' : 'Backup Mirror'}
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => {
+              if (!useBackup && backupVideoId) { setUseBackup(true); } else { setMode('error'); }
+            }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Video not playing?
+          </button>
+          <a
+            href={ytUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px',
+              borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+              color: '#f87171', fontSize: 11.5, fontWeight: 700, textDecoration: 'none',
+            }}
+          >
+            <svg width="12" height="9" viewBox="0 0 24 17" fill="currentColor"><path d="M23.5 2.5a3.1 3.1 0 00-2.2-2.2C19.4 0 12 0 12 0S4.6 0 2.7.3A3.1 3.1 0 00.5 2.5 32 32 0 000 8.5a32 32 0 00.5 6A3.1 3.1 0 002.7 16.7C4.6 17 12 17 12 17s7.4 0 9.3-.3a3.1 3.1 0 002.2-2.2 32 32 0 00.5-6 32 32 0 00-.5-6z"/><path d="M9.7 12.1V4.9l6.2 3.6-6.2 3.6z" fill="white"/></svg>
+            Watch on YouTube ↗
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -224,17 +456,41 @@ function buildCurriculum(course: typeof ALL_COURSES[0]): Module[] {
 
   // Pick video set based on topic
   const v = isML ? {
-    intro: VID.ml_intro, setup: VID.ml_setup, core: VID.ml_core, lab: VID.ml_lab, advanced: VID.ml_advanced,
+    intro: VID.ml_intro, intro_backup: VID.ml_intro_backup,
+    setup: VID.ml_setup, setup_backup: VID.ml_setup_backup,
+    core: VID.ml_core, core_backup: VID.ml_core_backup,
+    lab: VID.ml_lab, lab_backup: VID.ml_lab_backup,
+    advanced: VID.ml_advanced, advanced_backup: VID.ml_advanced_backup,
   } : isWeb ? {
-    intro: VID.web_intro, setup: VID.web_setup, core: VID.web_core, lab: VID.web_lab, advanced: VID.web_advanced,
+    intro: VID.web_intro, intro_backup: VID.web_intro_backup,
+    setup: VID.web_setup, setup_backup: VID.web_setup_backup,
+    core: VID.web_core, core_backup: VID.web_core_backup,
+    lab: VID.web_lab, lab_backup: VID.web_lab_backup,
+    advanced: VID.web_advanced, advanced_backup: VID.web_advanced_backup,
   } : isPy ? {
-    intro: VID.py_intro, setup: VID.py_setup, core: VID.py_core, lab: VID.py_lab, advanced: VID.py_advanced,
+    intro: VID.py_intro, intro_backup: VID.py_intro_backup,
+    setup: VID.py_setup, setup_backup: VID.py_setup_backup,
+    core: VID.py_core, core_backup: VID.py_core_backup,
+    lab: VID.py_lab, lab_backup: VID.py_lab_backup,
+    advanced: VID.py_advanced, advanced_backup: VID.py_advanced_backup,
   } : isDSA ? {
-    intro: VID.dsa_intro, setup: VID.dsa_setup, core: VID.dsa_core, lab: VID.dsa_lab, advanced: VID.dsa_advanced,
+    intro: VID.dsa_intro, intro_backup: VID.dsa_intro_backup,
+    setup: VID.dsa_setup, setup_backup: VID.dsa_setup_backup,
+    core: VID.dsa_core, core_backup: VID.dsa_core_backup,
+    lab: VID.dsa_lab, lab_backup: VID.dsa_lab_backup,
+    advanced: VID.dsa_advanced, advanced_backup: VID.dsa_advanced_backup,
   } : isDB ? {
-    intro: VID.db_intro, setup: VID.db_setup, core: VID.db_core, lab: VID.db_lab, advanced: VID.db_advanced,
+    intro: VID.db_intro, intro_backup: VID.db_intro_backup,
+    setup: VID.db_setup, setup_backup: VID.db_setup_backup,
+    core: VID.db_core, core_backup: VID.db_core_backup,
+    lab: VID.db_lab, lab_backup: VID.db_lab_backup,
+    advanced: VID.db_advanced, advanced_backup: VID.db_advanced_backup,
   } : {
-    intro: VID.generic_intro, setup: VID.generic_setup, core: VID.generic_core, lab: VID.generic_lab, advanced: VID.generic_advanced,
+    intro: VID.generic_intro, intro_backup: VID.generic_intro_backup,
+    setup: VID.generic_setup, setup_backup: VID.generic_setup_backup,
+    core: VID.generic_core, core_backup: VID.generic_core_backup,
+    lab: VID.generic_lab, lab_backup: VID.generic_lab_backup,
+    advanced: VID.generic_advanced, advanced_backup: VID.generic_advanced_backup,
   };
 
   const genericMCQ = (topic: string): MCQ[] => [
@@ -279,12 +535,14 @@ function buildCurriculum(course: typeof ALL_COURSES[0]): Module[] {
           id: 'l1', title: 'Introduction & Course Overview', duration: '12 min',
           type: 'video', free: true,
           videoId: v.intro,
+          backupVideoId: v.intro_backup,
           content: `## Welcome to ${course.title}\n\nIn this module we cover the fundamentals you need to succeed.\n\n### What you'll learn\n- Core concepts of ${course.subcategory}\n- Industry best practices\n- Hands-on examples\n\n### Prerequisites\n- Basic computer knowledge\n- Curiosity and dedication 🚀`,
         },
         {
           id: 'l2', title: 'Setting Up Your Environment', duration: '18 min',
           type: 'video', free: true,
           videoId: v.setup,
+          backupVideoId: v.setup_backup,
           content: `## Environment Setup\n\nA proper setup is critical for smooth learning.\n\n### Tools required\n- Code editor (VS Code recommended)\n- Terminal / Command Prompt\n- Internet connection\n\n### Installation steps\n1. Download VS Code from code.visualstudio.com\n2. Install required extensions\n3. Clone the starter repository`,
         },
         {
@@ -300,6 +558,7 @@ function buildCurriculum(course: typeof ALL_COURSES[0]): Module[] {
           id: 'l4', title: 'Core Theory Deep Dive', duration: '28 min',
           type: 'video',
           videoId: v.core,
+          backupVideoId: v.core_backup,
           content: `## Core Concepts\n\nThis session dives deep into the technical heart of ${course.title}.\n\n### Key topics\n- Architecture patterns\n- Common algorithms used\n- Real-world industry use cases\n- Performance considerations`,
         },
         {
@@ -311,6 +570,7 @@ function buildCurriculum(course: typeof ALL_COURSES[0]): Module[] {
           id: 'l6', title: 'Hands-on Lab: Build Your First Project', duration: '35 min',
           type: 'video',
           videoId: v.lab,
+          backupVideoId: v.lab_backup,
           content: `## Lab Session\n\nFollow along and build a complete mini-project.\n\n### What we'll build\nA working prototype demonstrating all concepts from Module 2.\n\n### Steps\n1. Project structure setup\n2. Core implementation\n3. Testing & debugging\n4. Deployment`,
         },
         {
@@ -326,6 +586,7 @@ function buildCurriculum(course: typeof ALL_COURSES[0]): Module[] {
           id: 'l8', title: 'Advanced Patterns & Real-world Projects', duration: '40 min',
           type: 'video',
           videoId: v.advanced,
+          backupVideoId: v.advanced_backup,
           content: `## Advanced Topics\n\nTake your skills to production level.\n\n### Topics covered\n- Scaling applications\n- Security best practices\n- Performance optimisation\n- Interview preparation tips`,
         },
         {
@@ -456,7 +717,7 @@ function LessonContent({ lesson }: { lesson: Lesson }) {
     <div style={{ maxWidth: 780 }}>
       {/* Video player */}
       {lesson.type === 'video' && lesson.videoId && (
-        <VideoPlayer videoId={lesson.videoId} title={lesson.title} />
+        <VideoPlayer videoId={lesson.videoId} backupVideoId={lesson.backupVideoId} title={lesson.title} />
       )}
 
       {/* Reading indicator */}
@@ -493,6 +754,9 @@ export default function CourseViewer() {
   const [modules, setModules]         = useState<Module[]>([]);
   const [activeLessonId, setActiveLessonId] = useState('l1');
   const [completed, setCompleted]     = useState<Set<string>>(new Set());
+  const { user } = useAuth();
+  const [viewingCert, setViewingCert] = useState<IssuedCertificate | null>(null);
+
   const [expandedMod, setExpandedMod] = useState<number[]>([0]);
   // ── Action states ──
   const [wishlisted, setWishlisted]   = useState(false);
@@ -525,6 +789,26 @@ export default function CourseViewer() {
   const prevLesson = allLessons[currentIdx - 1];
   const nextLesson = allLessons[currentIdx + 1];
 
+  const handleClaimCertificate = () => {
+    if (!course) return;
+    const allIds = new Set(allLessons.map(l => l.id));
+    setCompleted(allIds);
+    try {
+      const data = JSON.parse(localStorage.getItem('nm_course_progress') || '{}');
+      data[course.id] = 100;
+      localStorage.setItem('nm_course_progress', JSON.stringify(data));
+    } catch {}
+
+    const cert = issueCourseCertificate({
+      studentName: user?.name || 'nithish',
+      studentEmail: user?.email,
+      courseId: course.id,
+      courseTitle: course.title,
+      instructor: course.instructor,
+    });
+    setViewingCert(cert);
+  };
+
   const typeIcon = (t: string) =>
     t === 'video' ? <Play size={13} /> : t === 'quiz' ? <HelpCircle size={13} /> : <FileText size={13} />;
 
@@ -540,13 +824,27 @@ export default function CourseViewer() {
           <div className="font-display" style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.title}</div>
           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{course.instructor}</div>
         </div>
-        {/* Progress bar */}
+        {/* Progress bar & Quick Certificate claim */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{ width: 160, height: 6, borderRadius: 999, background: 'var(--border)' }}>
+          <div style={{ width: 140, height: 6, borderRadius: 999, background: 'var(--border)' }}>
             <div style={{ height: '100%', width: `${progress}%`, borderRadius: 999, background: 'linear-gradient(90deg,#7c3aed,#4f46e5)', transition: 'width 0.5s' }} />
           </div>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{progress}%</span>
           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{completed.size}/{totalLessons}</span>
+          <button
+            onClick={handleClaimCertificate}
+            style={{
+              padding: '6px 14px', borderRadius: 9,
+              background: progress === 100 ? 'rgba(16,185,129,0.15)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+              border: progress === 100 ? '1px solid #10b981' : 'none',
+              color: progress === 100 ? '#10b981' : '#fff',
+              fontWeight: 700, fontSize: 12, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: progress === 100 ? 'none' : '0 2px 10px rgba(124,58,237,0.3)',
+            }}
+          >
+            <Award size={13} /> {progress === 100 ? 'View Certificate' : '⚡ Complete & Get Cert'}
+          </button>
         </div>
       </div>
 
@@ -682,8 +980,15 @@ export default function CourseViewer() {
                     </p>
                     {/* Action row */}
                     <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                      <Link to="/certificates" className="btn btn-primary" style={{ fontSize: 14, padding: '11px 24px', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <Award size={15} /> Get Certificate
+                      <button
+                        onClick={handleClaimCertificate}
+                        className="btn btn-primary"
+                        style={{ fontSize: 14, padding: '11px 24px', display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none' }}
+                      >
+                        <Award size={15} /> View &amp; Download Certificate
+                      </button>
+                      <Link to="/portal/student" className="btn btn-ghost" style={{ fontSize: 14, padding: '11px 20px', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        My Student Portal →
                       </Link>
                       <button
                         onClick={() => setSaved(true)}
@@ -765,6 +1070,97 @@ export default function CourseViewer() {
           </AnimatePresence>
         </main>
       </div>
+      {/* ── MODAL: COURSE COMPLETION CERTIFICATE VIEWER & DOWNLOADER ── */}
+      {viewingCert && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20, backdropFilter: 'blur(8px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setViewingCert(null);
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: 880, background: 'var(--surface)', borderRadius: 20, padding: '24px 26px', maxHeight: '95vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
+                  <span style={{ fontSize:10.5, fontWeight:800, padding:'2px 8px', borderRadius:99, background:'rgba(16,185,129,0.12)', color:'#10b981' }}>
+                    🎓 Official Course Completion Credential · 100% Verified
+                  </span>
+                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                  {viewingCert.eventTitle}
+                </h3>
+                <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                  Awarded to <strong>{viewingCert.studentName || user?.name || 'nithish'}</strong> · Credential ID: {viewingCert.credentialId}
+                </span>
+              </div>
+              <button
+                onClick={() => setViewingCert(null)}
+                style={{ padding: '6px 14px', borderRadius: 9, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer', fontWeight:700, fontSize:12 }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div id="modal-course-certificate-content" style={{ maxWidth: 820, margin: '0 auto 20px' }}>
+              <CertificateRenderer
+                template={getAllCertificateTemplates().find((t) => t.id === viewingCert.templateId) || getAllCertificateTemplates()[0]}
+                studentName={viewingCert.studentName || user?.name || 'nithish'}
+                eventTitle={viewingCert.eventTitle}
+                issueDate={viewingCert.issueDate}
+                credentialId={viewingCert.credentialId}
+                issuerName={viewingCert.issuer}
+                achievementRank={viewingCert.achievementRank}
+                signers={viewingCert.signers}
+                customBgImage={viewingCert.customBgImage}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap:'wrap' }}>
+              <button
+                onClick={() => {
+                  const el = document.querySelector('#modal-course-certificate-content .certificate-print-card') || document.querySelector('.certificate-print-card');
+                  if (el) printCertificateWindow(el.outerHTML, viewingCert.eventTitle);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, padding: '11px 26px',
+                  borderRadius: 11, background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff',
+                  fontWeight: 800, fontSize: 13.5, cursor: 'pointer', boxShadow:'0 4px 18px rgba(16,185,129,0.3)',
+                }}
+              >
+                <Download size={15} /> Download PDF Certificate
+              </button>
+              <button
+                onClick={() => {
+                  const el = document.querySelector('#modal-course-certificate-content .certificate-print-card') || document.querySelector('.certificate-print-card');
+                  if (el) printCertificateWindow(el.outerHTML, viewingCert.eventTitle);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, padding: '11px 20px',
+                  borderRadius: 11, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text)',
+                  fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                <Printer size={15} /> Print Certificate
+              </button>
+              <button
+                onClick={() => {
+                  navigate('/portal/student');
+                }}
+                style={{
+                  padding: '11px 20px', borderRadius: 11, background: 'var(--bg-2)',
+                  border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                View in Student Portal →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

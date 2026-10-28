@@ -13,11 +13,30 @@ import {
 } from '../examData';
 import { useDebounce } from '../hooks';
 import { portalGetAll } from '../portalData';
+import { portalAppSave } from '../portalApplications';
 
 // Merge static + portal-created exams
 function getAllExams(): Exam[] {
+  const normalizedStatic: Exam[] = (EXAMS as any[]).map(e => ({
+    ...e,
+    organizer: e.organizer || e.conductedBy || 'NaanMudhalvan',
+    organizerLogo: e.organizerLogo || '⚡',
+    tags: Array.isArray(e.tags) ? e.tags : (Array.isArray(e.domains) ? e.domains : []),
+    price: e.price || (e.fee === 'FREE' ? 'Free' : (e.fee || 'Free')),
+    duration: typeof e.duration === 'number' ? `${e.duration} Minutes` : (e.duration || '120 Minutes'),
+    languages: Array.isArray(e.languages) ? e.languages : ['English'],
+    status: e.status || 'open',
+    color: e.color || '#7c3aed',
+    icon: e.icon || '📝',
+    eligibility: typeof e.eligibility === 'object' && e.eligibility !== null ? e.eligibility : {
+      branches: ['All Branches'],
+      years: ['All Years'],
+      minCGPA: 0,
+    },
+  }));
+
   const portal = portalGetAll('exam').filter((e: any) => e.status === 'active').map((e: any, i: number): Exam => ({
-    id:                   70000 + i,
+    id:                   e.id ? Number(e.id) : (70000 + i),
     title:                e.title || 'Untitled Exam',
     shortTitle:           e.shortTitle || e.title?.split(' ').slice(0,3).join(' ') || '',
     category:             (e.category || 'skill-assessment') as ExamCategory,
@@ -49,11 +68,27 @@ function getAllExams(): Exam[] {
     color:        '#8b5cf6',
     gradient:     'linear-gradient(135deg,#8b5cf6,#6d28d9)',
     _portal:      true as any,
+    _author:      (e as any)._author || 'admin',
+    status:       'open',
+    icon:         '📝',
+    tags:         typeof e.languages === 'string' ? e.languages.split(',').map((s: string) => s.trim()) : ['Certification', 'Exam'],
+    pattern: {
+      totalQuestions: parseInt(e.totalQuestions) || 100,
+      totalMarks:     parseInt(e.totalMarks) || 100,
+      duration:       parseInt(e.duration) || 120,
+      marksPerQuestion: 1,
+      negativeMarking: parseFloat(e.negativeMarking) || 0,
+      sections:       [{ name: 'General & Technical', questions: parseInt(e.totalQuestions) || 100, marks: parseInt(e.totalMarks) || 100 }],
+    },
+    certificateOnPass: true,
+    featured:     false,
+    totalRegistered: 0,
+    maxRegistrations: 10000,
   }));
-  return [...EXAMS, ...portal];
+  return [...normalizedStatic, ...portal];
 }
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ──────────────────────────────────────────────────────
 function daysUntil(d: string) {
   return Math.ceil((new Date(d).getTime() - Date.now()) / 86_400_000);
 }
@@ -69,7 +104,7 @@ const DIFF_COLOR: Record<string, string> = {
   Easy: '#10b981', Moderate: '#3b82f6', Hard: '#f97316', Expert: '#ef4444'
 };
 
-// â”€â”€ Center Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Center Card ───────────────────────────────────────────────────
 function CenterCard({ center, selected, onSelect }: { center: ExamCenter; selected: boolean; onSelect: (id: string) => void }) {
   const fill = pct(center.totalSeats - center.seatsAvailable, center.totalSeats);
   return (
@@ -111,7 +146,7 @@ function CenterCard({ center, selected, onSelect }: { center: ExamCenter; select
   );
 }
 
-// â”€â”€ Registration Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Registration Modal ────────────────────────────────────────────
 function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
   type Step = 'details' | 'center' | 'form' | 'review' | 'success';
   const [step,           setStep]    = useState<Step>(exam.mode === 'offline' ? 'details' : 'details');
@@ -163,7 +198,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
       `🎓 Just registered for ${exam.title} on @NaanMudhalvan!\n📋 Reg: ${regNo}  📅 ${exam.examDate}\n`
     )}&url=${encodeURIComponent(window.location.href)}`;
 
-  // â”€â”€ Admit Card PDF Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Admit Card PDF Generator ────────────────────────────────
   const downloadAdmitCard = () => {
     const center = exam.centers?.find(c => c.id === selectedCenter);
     const html = `
@@ -171,7 +206,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admit Card ”” ${exam.shortTitle}</title>
+  <title>Admit Card — ${exam.shortTitle}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Arial', sans-serif; background:#f0f4f8; display:flex; justify-content:center; padding:24px; }
@@ -261,7 +296,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
     <div class="logo-box">⚡</div>
     <div class="header-text">
       <h1>NaanMudhalvan</h1>
-      <p>Learning Marketplace ”” Tamil Nadu</p>
+      <p>Learning Marketplace — Tamil Nadu</p>
     </div>
     <div class="header-right">
       <div class="tag">Hall Ticket</div>
@@ -299,8 +334,8 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
     <div class="schedule-grid">
       <div class="schedule-box"><div class="icon">📅</div><div class="lbl">Exam Date</div><div class="val">${exam.examDate}</div></div>
       <div class="schedule-box"><div class="icon">⏰</div><div class="lbl">Exam Time</div><div class="val">${exam.examTime}</div></div>
-      <div class="schedule-box"><div class="icon">⏱ï¸</div><div class="lbl">Duration</div><div class="val">${exam.duration}</div></div>
-      <div class="schedule-box"><div class="icon">ðŸ…</div><div class="lbl">Admit Card Date</div><div class="val">${exam.admitCardDate}</div></div>
+      <div class="schedule-box"><div class="icon">⏱️</div><div class="lbl">Duration</div><div class="val">${exam.duration}</div></div>
+      <div class="schedule-box"><div class="icon">🏅</div><div class="lbl">Admit Card Date</div><div class="val">${exam.admitCardDate}</div></div>
     </div>
 
     <!-- EXAM CENTER -->
@@ -329,7 +364,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
         <tr><td style="font-weight:800;color:#111;">Total</td><td style="font-weight:800;">${exam.pattern?.totalQuestions ?? exam.totalQuestions ?? 100}</td><td style="font-weight:800;">${exam.pattern?.totalMarks ?? exam.totalMarks ?? 100}</td></tr>
       </tbody>
     </table>
-    <p style="font-size:11px;color:#6b7280;margin-top:6px;">Negative Marking: ${(exam.pattern?.negativeMarking ?? 0) > 0 ? `âˆ’${exam.pattern?.negativeMarking} mark per wrong answer` : 'No negative marking'} &nbsp;|&nbsp; Language: ${(exam.languages ?? ['English']).join(', ')}</p>
+    <p style="font-size:11px;color:#6b7280;margin-top:6px;">Negative Marking: ${(exam.pattern?.negativeMarking ?? 0) > 0 ? `−${exam.pattern?.negativeMarking} mark per wrong answer` : 'No negative marking'} &nbsp;|&nbsp; Language: ${(exam.languages ?? ['English']).join(', ')}</p>
 
     <!-- INSTRUCTIONS -->
     <div class="section-title" style="margin-top:18px;">Important Instructions</div>
@@ -380,6 +415,28 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
     const saved = JSON.parse(localStorage.getItem('nm_exam_registrations') || '[]');
     saved.push({ examId: exam.id, regNo: rn, center: selectedCenter, form, date: new Date().toISOString() });
     localStorage.setItem('nm_exam_registrations', JSON.stringify(saved));
+
+    // Also sync to portal applications so the college/organizer sees it in Registrations
+    try {
+      portalAppSave({
+        type: 'exam',
+        itemId: exam.id,
+        itemTitle: exam.title,
+        itemCompany: exam.organizer || 'College',
+        itemAuthor: (exam as any)._author || 'college',
+        studentName: form.name || 'Student',
+        studentEmail: form.email || '',
+        studentPhone: form.phone || '',
+        studentCollege: form.college || '',
+        studentBranch: form.branch || '',
+        studentYear: form.year || '',
+        coverLetter: `Reg No: ${rn} | Mode: ${exam.mode} | Center: ${centerObj?.city || selectedCenter || 'Online'}`,
+        resumeLink: '',
+        status: 'registered',
+      });
+    } catch (err) {
+      console.warn('Failed to sync exam registration to portal applications', err);
+    }
     setLoading(false);
     setStep('success');
   };
@@ -398,7 +455,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
         transition={{ type: 'spring', stiffness: 320, damping: 26 }}
         style={{ width: '100%', maxWidth: 620, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 22, overflow: 'hidden', maxHeight: '94vh', display: 'flex', flexDirection: 'column' }}>
 
-        {/* â”€â”€ Fixed Header â”€â”€ */}
+        {/* ── Fixed Header ── */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', background: `linear-gradient(135deg,${exam.color}14,transparent)`, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: step !== 'success' ? 16 : 0 }}>
             <div style={{ flex: 1 }}>
@@ -432,7 +489,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
           )}
         </div>
 
-        {/* â”€â”€ Scrollable Body â”€â”€ */}
+        {/* ── Scrollable Body ── */}
         <div style={{ overflowY: 'auto', flex: 1 }}>
 
           {/* STEP: details */}
@@ -444,7 +501,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                   { icon: <Clock size={13} />,    label: 'Exam Time',   val: exam.examTime },
                   { icon: <FileText size={13} />, label: 'Duration',    val: exam.duration },
                   { icon: <Users size={13} />,    label: 'Questions',   val: `${exam.pattern?.totalQuestions ?? exam.totalQuestions ?? 100} Qs · ${exam.pattern?.totalMarks ?? exam.totalMarks ?? 100} Marks` },
-                  { icon: <Shield size={13} />,   label: 'Negative Marking', val: (exam.pattern?.negativeMarking ?? exam.negativeMarking ?? 0) > 0 ? `âˆ’${exam.pattern?.negativeMarking ?? exam.negativeMarking} per wrong` : 'No negative marking' },
+                  { icon: <Shield size={13} />,   label: 'Negative Marking', val: (exam.pattern?.negativeMarking ?? exam.negativeMarking ?? 0) > 0 ? `−${exam.pattern?.negativeMarking ?? exam.negativeMarking} per wrong` : 'No negative marking' },
                   { icon: <Award size={13} />,    label: 'Certificate', val: exam.certificateOnPass ? 'On passing' : 'Participation only' },
                 ].map((item, i) => (
                   <div key={i} style={{ padding: '10px 13px', borderRadius: 11, background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
@@ -512,7 +569,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 <div style={{ padding: '10px 14px', borderRadius: 11, background: 'rgba(124,58,237,0.07)', border: '1px solid rgba(124,58,237,0.2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Building2 size={14} color="#7c3aed" />
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{centerObj.city} ”” {centerObj.venue}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{centerObj.city} — {centerObj.venue}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{centerObj.address}</div>
                   </div>
                 </div>
@@ -576,7 +633,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                   ['College', form.college],
                   ['Branch',  form.branch],
                   ['Year',    form.year],
-                  ['CGPA',    form.cgpa || '””'],
+                  ['CGPA',    form.cgpa || '—'],
                 ].map(([label, val]) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
                     <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{label}</span>
@@ -586,7 +643,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 {centerObj && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0' }}>
                     <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Exam Center</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>{centerObj.city} ”” {centerObj.venue}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>{centerObj.city} — {centerObj.venue}</span>
                   </div>
                 )}
               </div>
@@ -604,7 +661,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 <button className="btn btn-ghost" onClick={() => setStep('form')} style={{ flex: 1, justifyContent: 'center' }}>â† Edit</button>
                 <button className="btn btn-primary" disabled={loading} onClick={handleSubmit}
                   style={{ flex: 2, justifyContent: 'center', fontSize: 14, fontWeight: 700, padding: '13px', background: `linear-gradient(135deg, ${exam.color}, ${exam.color}cc)`, borderColor: exam.color }}>
-                  {loading ? '⏳ Registering…' : `✓ Confirm Registration ”” ${exam.price}`}
+                  {loading ? '⏳ Registering…' : `✓ Confirm Registration — ${exam.price}`}
                 </button>
               </div>
             </div>
@@ -637,7 +694,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
                 {[
                   { icon: '📅', label: 'Exam Date',  val: exam.examDate },
                   { icon: '⏰', label: 'Exam Time',  val: exam.examTime },
-                  { icon: '🎟ï¸', label: 'Admit Card', val: exam.admitCardDate },
+                  { icon: '🎟️', label: 'Admit Card', val: exam.admitCardDate },
                 ].map(item => (
                   <div key={item.label} style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-2)', border: '1px solid var(--border)', textAlign: 'center' }}>
                     <div style={{ fontSize: 18, marginBottom: 4 }}>{item.icon}</div>
@@ -733,7 +790,7 @@ function ExamRegModal({ exam, onClose }: { exam: Exam; onClose: () => void }) {
   );
 }
 
-// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Page ─────────────────────────────────────────────────────
 export default function ExamPortalPage() {
   const [cat,      setCat]      = useState<ExamCategory | 'all'>('all');
   const [modeF,    setModeF]    = useState<ExamMode | 'all'>('all');
@@ -756,8 +813,8 @@ export default function ExamPortalPage() {
     if (priceF === 'paid' && e.price === 'Free')  return false;
     if (dQ) {
       const q2 = dQ.toLowerCase();
-      return e.title.toLowerCase().includes(q2) || e.organizer.toLowerCase().includes(q2) ||
-        (e.tags||[]).some((t:string) => t.toLowerCase().includes(q2)) || e.category.toLowerCase().includes(q2);
+      return (e.title || '').toLowerCase().includes(q2) || (e.organizer || (e as any).conductedBy || '').toLowerCase().includes(q2) ||
+        (e.tags || (e as any).domains || []).some((t: string) => (t || '').toLowerCase().includes(q2)) || (e.category || '').toLowerCase().includes(q2) || (e.shortTitle || '').toLowerCase().includes(q2);
     }
     return true;
   }), [allExams, cat, modeF, priceF, dQ]);
@@ -766,7 +823,7 @@ export default function ExamPortalPage() {
     { label: 'Total Exams',     val: allExams.length,                              icon: '📋', color: '#7c3aed' },
     { label: 'Online',          val: allExams.filter(e=>e.mode==='online').length,  icon: '🌐', color: '#10b981' },
     { label: 'Offline Centers', val: TN_CENTERS.length,                            icon: '📍', color: '#3b82f6' },
-    { label: 'Free Exams',      val: allExams.filter(e=>e.price==='Free').length,   icon: '🄓', color: '#f59e0b' },
+    { label: 'Free Exams',      val: allExams.filter(e=>e.price==='Free').length,   icon: '🆓', color: '#f59e0b' },
   ];
 
   return (
@@ -816,7 +873,7 @@ export default function ExamPortalPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, animation: 'marquee 30s linear infinite', width: 'max-content' }}>
           {[...TN_CENTERS, ...TN_CENTERS].map((c, i) => (
             <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 999, background: 'var(--bg-2)', border: '1px solid var(--border)', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', flexShrink: 0 }}>
-              <MapPin size={11} color="#3b82f6" /> {c.city} ”” {c.venue}
+              <MapPin size={11} color="#3b82f6" /> {c.city} — {c.venue}
             </span>
           ))}
         </div>
@@ -850,7 +907,7 @@ export default function ExamPortalPage() {
               {(['all', 'free', 'paid'] as const).map(p => (
                 <button key={p} onClick={() => setPriceF(p)}
                   style={{ padding: '7px 13px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: `1.5px solid ${priceF === p ? 'var(--accent)' : 'var(--border)'}`, background: priceF === p ? 'rgba(124,58,237,0.1)' : 'var(--surface)', color: priceF === p ? 'var(--accent)' : 'var(--text-2)', transition: 'all 0.18s' }}>
-                  {p === 'all' ? 'All Prices' : p === 'free' ? '🄓 Free' : 'ðŸ’³ Paid'}
+                  {p === 'all' ? 'All Prices' : p === 'free' ? '🆓 Free' : '💳 Paid'}
                 </button>
               ))}
             </div>
@@ -909,7 +966,7 @@ export default function ExamPortalPage() {
                           <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 9px', borderRadius: 999, background: status.bg, color: status.color }}>
                             {status.label}
                           </span>
-                          {exam.featured && <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 9px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>â­ Featured</span>}
+                          {exam.featured && <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 9px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>⭐ Featured</span>}
                         </div>
                       </div>
 
@@ -925,7 +982,7 @@ export default function ExamPortalPage() {
                           { icon: <Calendar size={11} />, label: 'Exam Date', val: exam.examDate },
                           { icon: <Clock size={11} />,    label: 'Duration',  val: exam.duration },
                           { icon: <FileText size={11} />, label: 'Questions', val: `${exam.pattern?.totalQuestions ?? exam.totalQuestions ?? 100} Qs · ${exam.pattern?.totalMarks ?? exam.totalMarks ?? 100}M` },
-                          { icon: <Globe size={11} />,    label: 'Language',  val: exam.languages.join(', ') },
+                          { icon: <Globe size={11} />,    label: 'Language',  val: (Array.isArray(exam.languages) ? exam.languages : ['English']).join(', ') },
                         ].map((it, idx) => (
                           <div key={idx} style={{ padding: '8px 10px', borderRadius: 9, background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: examColor, marginBottom: 3 }}>{it.icon}</div>
@@ -1000,7 +1057,7 @@ export default function ExamPortalPage() {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 1 }}>Reg. closes</div>
                           <div style={{ fontSize: 11.5, fontWeight: 700, color: deadline <= 3 ? '#ef4444' : deadline <= 7 ? '#f59e0b' : '#10b981' }}>
-                            {deadline < 0 ? 'Closed' : deadline === 0 ? 'Last Day!' : `${deadline}d left ”” ${exam.registrationDeadline}`}
+                            {deadline < 0 ? 'Closed' : deadline === 0 ? 'Last Day!' : `${deadline}d left — ${exam.registrationDeadline}`}
                           </div>
                         </div>
                         {isReg ? (
@@ -1012,7 +1069,7 @@ export default function ExamPortalPage() {
                             onClick={() => setSelected(exam)}
                             disabled={exam.status === 'closed'}
                             style={{ padding: '9px 18px', fontSize: 13, fontWeight: 700, background: `linear-gradient(135deg, ${examColor}, ${examColor}cc)`, borderColor: examColor, opacity: exam.status === 'closed' ? 0.5 : 1, cursor: exam.status === 'closed' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
-                            {exam.price === 'Free' ? '🄓 Register' : `Register · ${exam.price}`}
+                            {exam.price === 'Free' ? '🆓 Register' : `Register · ${exam.price}`}
                           </button>
                         )}
                       </div>

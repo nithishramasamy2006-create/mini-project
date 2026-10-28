@@ -99,9 +99,9 @@ export default function CoursesPage() {
     let list = getAllCourses().filter(c => {
       if (activeCat !== 'all' && c.category !== activeCat) return false;
       if (subcat !== 'All Subcategories' && c.subcategory !== subcat) return false;
-      if (dQ && !c.title.toLowerCase().includes(dQ.toLowerCase()) &&
-               !c.instructor.toLowerCase().includes(dQ.toLowerCase()) &&
-               !c.subcategory.toLowerCase().includes(dQ.toLowerCase())) return false;
+      if (dQ && !(c.title || '').toLowerCase().includes(dQ.toLowerCase()) &&
+               !(c.instructor || '').toLowerCase().includes(dQ.toLowerCase()) &&
+               !(c.subcategory || '').toLowerCase().includes(dQ.toLowerCase())) return false;
       return true;
     });
     if (sortBy === 'Top Rated')    list = [...list].sort((a,b) => b.rating - a.rating);

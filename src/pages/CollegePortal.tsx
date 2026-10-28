@@ -12,7 +12,7 @@ import CertificateIssuer from '../components/CertificateIssuer';
 import { portalGetByAuthor } from '../portalData';
 import { portalAppGetByAuthor } from '../portalApplications';
 
-type Tab = 'dashboard' | 'students' | 'placements' | 'companies' | 'events' | 'registrations' | 'announcements' | 'certificates' | 'profile' | 'settings';
+type Tab = 'dashboard' | 'students' | 'placements' | 'companies' | 'events' | 'exams' | 'registrations' | 'announcements' | 'certificates' | 'profile' | 'settings';
 
 // ── Mock students ─────────────────────────────────────────────────
 const MOCK_STUDENTS = Array.from({ length: 28 }, (_, i) => ({
@@ -63,6 +63,7 @@ export default function CollegePortal() {
   // College identifier for content scoping
   const collegeId = ((user as any)?.collegeName || user?.email || 'college').toLowerCase().replace(/\s+/g,'_');
   const myEvents  = useMemo(() => portalGetByAuthor('event', collegeId).length, [tab]);
+  const myExams   = useMemo(() => portalGetByAuthor('exam', collegeId).length, [tab]);
 
   useEffect(() => {
     if (!user || user.role !== 'college') { navigate('/login'); return; }
@@ -120,6 +121,7 @@ export default function CollegePortal() {
     { id:'placements',    label:'Placement Report',  icon:'📊' },
     { id:'companies',     label:'Company Connect',   icon:'🏢' },
     { id:'events',        label:'College Events',    icon:'🎪', count:myEvents },
+    { id:'exams',         label:'College Exams',     icon:'📝', count:myExams },
     { id:'registrations', label:'Registrations',     icon:'📋', count:eventRegistrations.filter(r=>r.status==='registered').length },
     { id:'announcements', label:'Announcements',     icon:'📣' },
     { id:'certificates',  label:'Issue Certificate', icon:'🏅' },
@@ -174,6 +176,7 @@ export default function CollegePortal() {
               <Stat icon="∑"  label="Average CGPA"      value={avgCgpa} color="#3b82f6"/>
               <Stat icon="🏢" label="Partner Companies" value={COMPANIES.length} color="#06b6d4"/>
               <Stat icon="🎪" label="College Events"    value={myEvents} color="#ec4899"/>
+              <Stat icon="📝" label="College Exams"     value={myExams} color="#8b5cf6"/>
             </div>
 
             {/* Branch-wise placement bars */}
@@ -379,19 +382,29 @@ export default function CollegePortal() {
           </motion.div>
         )}
 
-        {/* EVENT REGISTRATIONS */}
+        {/* COLLEGE EXAMS — Creator & Editor */}
+        {tab === 'exams' && (
+          <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>College Exams & Assessments — Creator & Editor</h2>
+            <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:20 }}>
+              Create, schedule, edit, and publish campus tests, semester assessments, and certification exams. Students register via <strong>/exams</strong> — registrations appear in your <strong>Registrations</strong> tab.
+            </p>
+            <ContentManager type="exam" author={collegeId} accentColor="#8b5cf6" />
+          </motion.div>
+        )}
+
+        {/* EVENT & EXAM REGISTRATIONS */}
         {tab === 'registrations' && (
           <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}>
-            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Event Registrations</h2>
+            <h2 className="font-display" style={{ fontWeight:700, fontSize:22, color:'var(--text)', marginBottom:4 }}>Event & Exam Registrations</h2>
             <p style={{ fontSize:13, color:'var(--text-3)', marginBottom:24 }}>
-              <strong style={{ color:'#10b981' }}>Confirm</strong> or <strong style={{ color:'#ef4444' }}>cancel</strong> student registrations for your college events
+              <strong style={{ color:'#10b981' }}>Confirm</strong> or <strong style={{ color:'#ef4444' }}>cancel</strong> student registrations for your college events and exams
             </p>
             <ApplicationAcceptancePanel
               authorId={collegeId}
-              filterType="event"
-              accentColor="#10b981"
+              accentColor="#8b5cf6"
               emptyMessage="No registrations yet"
-              emptyAction={{ label:'Create an Event', onClick:() => setTab('events') }}
+              emptyAction={{ label:'Create an Exam or Event', onClick:() => setTab('exams') }}
             />
           </motion.div>
         )}

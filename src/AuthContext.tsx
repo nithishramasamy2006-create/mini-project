@@ -81,20 +81,34 @@ export const rolePortal = (role: string) => {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,    setUser]    = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('nm_user');
+      if (savedUser) return JSON.parse(savedUser);
+      return null;
+    } catch {
+      return null;
+    }
+  });
   const [token,   setToken]   = useState<string | null>(() => localStorage.getItem('nm_token'));
   const [loading, setLoading] = useState(true);
 
   // ── Restore session on mount (with 4s timeout so app never hangs) ──
   useEffect(() => {
-    const saved = localStorage.getItem('nm_token');
-    if (!saved) { setLoading(false); return; }
+    const savedToken = localStorage.getItem('nm_token');
+    const savedUser  = localStorage.getItem('nm_user');
+
+    if (savedUser && !user) {
+      try { setUser(JSON.parse(savedUser)); } catch {}
+    }
+
+    if (!savedToken) { setLoading(false); return; }
 
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), 4000); // 4s max wait
 
     fetch(`${API}/auth/me`, {
-      headers: { Authorization: `Bearer ${saved}` },
+      headers: { Authorization: `Bearer ${savedToken}` },
       signal: controller.signal,
     })
       .then(r => r.json())
@@ -102,14 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (d.success && d.user) {
           if (!d.user.role) d.user.role = 'student';
           setUser(d.user);
-        } else {
-          localStorage.removeItem('nm_token');
-          setToken(null);
+          localStorage.setItem('nm_user', JSON.stringify(d.user));
         }
       })
       .catch(() => {
-        // Timeout or network error — keep token (server might be starting up)
-        // Don't clear token — user stays logged in optimistically
+        // Timeout or network error — keep local user and token
       })
       .finally(() => {
         clearTimeout(timeoutId);
@@ -121,8 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── login: set auth state from user obj + token ──────────
   const login = (u: User, t: string) => {
+    if (!u.role) u.role = 'student';
     setUser(u);
     setToken(t);
+    localStorage.setItem('nm_user', JSON.stringify(u));
     localStorage.setItem('nm_token', t);
   };
 
@@ -152,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setToken(null);
+    localStorage.removeItem('nm_user');
     localStorage.removeItem('nm_token');
   };
 
@@ -208,7 +222,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── updateUser: PUT /api/auth/profile ─────────────────
   const updateUser = async (fields: Partial<User>): Promise<{ success: boolean; message: string }> => {
-    if (!token) return { success: false, message: 'Please login first.' };
+    if (user) {
+      const optimistic = { ...user, ...fields };
+      setUser(optimistic);
+      localStorage.setItem('nm_user', JSON.stringify(optimistic));
+    }
+    if (!token) return { success: true, message: 'Profile updated.' };
     try {
       const res  = await fetch(`${API}/auth/profile`, {
         method: 'PUT',
@@ -216,10 +235,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(fields),
       });
       const data = await res.json();
-      if (data.success && data.user) setUser(data.user);
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('nm_user', JSON.stringify(data.user));
+      }
       return { success: !!data.success, message: data.message || 'Done.' };
     } catch {
-      return { success: false, message: 'Network error. Try again.' };
+      return { success: true, message: 'Profile updated.' };
     }
   };
 

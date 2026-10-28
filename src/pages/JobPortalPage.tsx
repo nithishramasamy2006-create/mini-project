@@ -14,9 +14,9 @@ import { BASE } from '../api';
 import { portalGetAll } from '../portalData';
 import PortalApplyModal from '../components/PortalApplyModal';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Types
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 interface Job {
   id: number; title: string; company: string; logo: string; color: string;
   location: string; type: 'Full-time' | 'Part-time' | 'Remote' | 'Hybrid' | 'Contract';
@@ -33,9 +33,9 @@ interface ApplicationRecord {
   createdAt: string; resumeLink: string; coverLetter: string;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Static Job Data
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 const JOBS: Job[] = [
   {
     id: 101, title: 'Software Engineer – Full Stack', company: 'Zoho Corp', logo: '🟧', color: '#e42527',
@@ -202,18 +202,18 @@ const JOB_TYPES = ['All Types', 'Full-time', 'Part-time', 'Remote', 'Hybrid', 'C
 const EXPERIENCES = ['All Levels', '0–2 yrs', '1–3 yrs', '1–4 yrs', '2–4 yrs', '2–5 yrs', '3–6 yrs', '5–8 yrs'];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  pending:     { label: 'Under Review',  color: '#f59e0b', bg: '#f59e0b18', icon: 'â³' },
-  reviewed:    { label: 'Reviewed',      color: '#3b82f6', bg: '#3b82f618', icon: 'ðŸ‘ï¸' },
-  shortlisted: { label: 'Shortlisted',   color: '#8b5cf6', bg: '#8b5cf618', icon: 'â­' },
-  interview:   { label: 'Interview',     color: '#06b6d4', bg: '#06b6d418', icon: 'ðŸ“…' },
+  pending:     { label: 'Under Review',  color: '#f59e0b', bg: '#f59e0b18', icon: '⏳' },
+  reviewed:    { label: 'Reviewed',      color: '#3b82f6', bg: '#3b82f618', icon: '👁️' },
+  shortlisted: { label: 'Shortlisted',   color: '#8b5cf6', bg: '#8b5cf618', icon: '⭐' },
+  interview:   { label: 'Interview',     color: '#06b6d4', bg: '#06b6d418', icon: '📅' },
   hired:       { label: 'Hired 🎉',      color: '#10b981', bg: '#10b98118', icon: '🎉' },
-  accepted:    { label: 'Accepted 🎉',   color: '#10b981', bg: '#10b98118', icon: 'âœ…' },
-  rejected:    { label: 'Not Selected',  color: '#ef4444', bg: '#ef444418', icon: 'âŒ' },
+  accepted:    { label: 'Accepted 🎉',   color: '#10b981', bg: '#10b98118', icon: '✅' },
+  rejected:    { label: 'Not Selected',  color: '#ef4444', bg: '#ef444418', icon: '❌' },
 };
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Apply Modal — Full Form connected to backend
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function ApplyModal({ job, onClose, onSuccess, token, user }: {
   job: Job; onClose: () => void; onSuccess: (app: ApplicationRecord) => void;
   token: string | null; user: any;
@@ -301,7 +301,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
                 {steps.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     <div style={{ width: 26, height: 26, borderRadius: '50%', background: i < step ? job.color : i === step ? job.color : 'var(--surface-2)', border: `2px solid ${i <= step ? job.color : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i <= step ? '#fff' : 'var(--text-3)', transition: 'all 0.3s', flexShrink: 0 }}>
-                      {i < step ? 'âœ“' : i + 1}
+                      {i < step ? '✓' : i + 1}
                     </div>
                     {i < steps.length - 1 && <div style={{ flex: 1, height: 2, background: i < step ? job.color : 'var(--border)', transition: 'background 0.3s', margin: '0 4px' }} />}
                   </div>
@@ -334,7 +334,7 @@ function ApplyModal({ job, onClose, onSuccess, token, user }: {
               {savedApp && (
                 <div style={{ background: '#10b98112', border: '1px solid #10b98130', borderRadius: 14, padding: '14px 18px', textAlign: 'left', marginBottom: 20 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#10b981', marginBottom: 8 }}>Application Details</div>
-                  {[['Application ID', savedApp._id?.slice(-8).toUpperCase()], ['Status', 'Under Review â³'], ['Company', job.company], ['Role', job.title]].map(([k, v]) => (
+                  {[['Application ID', savedApp._id?.slice(-8).toUpperCase()], ['Status', 'Under Review ⏳'], ['Company', job.company], ['Role', job.title]].map(([k, v]) => (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0', borderBottom: '1px solid #10b98118' }}>
                       <span style={{ color: 'var(--text-3)' }}>{k}</span>
                       <span style={{ color: 'var(--text)', fontWeight: 600 }}>{v}</span>
@@ -478,9 +478,9 @@ function BookIcon() {
   return <FileText size={13} />;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // My Applications Dashboard Tab
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function MyApplications({ token }: { token: string | null }) {
   const [apps, setApps] = useState<ApplicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -508,7 +508,7 @@ function MyApplications({ token }: { token: string | null }) {
 
   if (!token) return (
     <div style={{ textAlign: 'center', padding: '64px 0' }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>ðŸ”</div>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
       <h3 style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)', marginBottom: 8 }}>Sign in to track applications</h3>
       <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Login or register to apply for jobs and track your application status.</p>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
@@ -523,9 +523,9 @@ function MyApplications({ token }: { token: string | null }) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 12, marginBottom: 22 }}>
         {[
-          { label: 'Total Applied', val: apps.length, color: '#7c3aed', icon: 'ðŸ“‹' },
-          { label: 'Shortlisted', val: apps.filter(a => a.status === 'shortlisted').length, color: '#8b5cf6', icon: 'â­' },
-          { label: 'Interviews', val: apps.filter(a => a.status === 'interview').length, color: '#06b6d4', icon: 'ðŸ“…' },
+          { label: 'Total Applied', val: apps.length, color: '#7c3aed', icon: '📋' },
+          { label: 'Shortlisted', val: apps.filter(a => a.status === 'shortlisted').length, color: '#8b5cf6', icon: '⭐' },
+          { label: 'Interviews', val: apps.filter(a => a.status === 'interview').length, color: '#06b6d4', icon: '📅' },
           { label: 'Offers', val: apps.filter(a => ['hired', 'accepted'].includes(a.status)).length, color: '#10b981', icon: '🎉' },
         ].map(s => (
           <div key={s.label} style={{ background: `${s.color}10`, border: `1px solid ${s.color}25`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -560,7 +560,7 @@ function MyApplications({ token }: { token: string | null }) {
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '56px 0' }}>
-          <div style={{ fontSize: 52, marginBottom: 14 }}>ðŸ“­</div>
+          <div style={{ fontSize: 52, marginBottom: 14 }}>📭</div>
           <h3 style={{ fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>{filter === 'all' ? 'No applications yet' : `No ${STATUS_CONFIG[filter]?.label} applications`}</h3>
           <p style={{ fontSize: 14, color: 'var(--text-3)' }}>Browse the jobs above and hit "Apply Now" to get started.</p>
         </div>
@@ -593,7 +593,7 @@ function MyApplications({ token }: { token: string | null }) {
                 <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 8 }}>
                   {[
                     { label: 'Applied on', val: new Date(app.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), icon: <Calendar size={11} /> },
-                    { label: 'Resume', val: app.resumeLink ? <a href={app.resumeLink} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-light)', textDecoration: 'none' }}>View Resume â†’</a> : 'Not provided', icon: <FileText size={11} /> },
+                    { label: 'Resume', val: app.resumeLink ? <a href={app.resumeLink} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-light)', textDecoration: 'none' }}>View Resume →</a> : 'Not provided', icon: <FileText size={11} /> },
                     { label: 'App ID', val: `#${app._id?.slice(-8).toUpperCase()}`, icon: <ClipboardList size={11} /> },
                   ].map((item, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-2)' }}>
@@ -614,7 +614,7 @@ function MyApplications({ token }: { token: string | null }) {
                     return (
                       <div key={s} style={{ display: 'flex', alignItems: 'center', flex: idx < arr.length - 1 ? '1 1 auto' : 'none' }}>
                         <div title={STATUS_CONFIG[s]?.label} style={{ width: 20, height: 20, borderRadius: '50%', background: isRejected && idx === currentIdx ? '#ef4444' : isActive ? st.color : 'var(--surface-2)', border: `2px solid ${isActive ? st.color : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, flexShrink: 0, transition: 'all 0.3s', cursor: 'default' }}>
-                          {isActive && !isRejected && 'âœ“'}
+                          {isActive && !isRejected && '✓'}
                         </div>
                         {idx < arr.length - 1 && <div style={{ flex: 1, height: 2, background: isActive && idx < currentIdx ? st.color : 'var(--border)', transition: 'background 0.3s', minWidth: 8 }} />}
                       </div>
@@ -637,9 +637,9 @@ function MyApplications({ token }: { token: string | null }) {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Job Detail Drawer
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
   job: Job; onClose: () => void; onApply: () => void; saved: boolean; onToggleSave: () => void; hasApplied: boolean;
 }) {
@@ -665,8 +665,8 @@ function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
           <div>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{job.title}</h2>
-              {job.urgent && <span style={{ fontSize: 10, fontWeight: 700, background: '#ef444418', color: '#ef4444', padding: '2px 8px', borderRadius: 99 }}>ðŸ”¥ URGENT</span>}
-              {job.featured && <span style={{ fontSize: 10, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 8px', borderRadius: 99 }}>â­ FEATURED</span>}
+              {job.urgent && <span style={{ fontSize: 10, fontWeight: 700, background: '#ef444418', color: '#ef4444', padding: '2px 8px', borderRadius: 99 }}>🔥 URGENT</span>}
+              {job.featured && <span style={{ fontSize: 10, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 8px', borderRadius: 99 }}>⭐ FEATURED</span>}
             </div>
             <p style={{ fontSize: 13.5, color: job.color, fontWeight: 700, marginBottom: 5 }}>{job.company}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12, color: 'var(--text-2)' }}>
@@ -726,7 +726,7 @@ function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
         <section style={{ marginBottom: 20 }}>
           <h4 style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 8 }}>Perks & Benefits</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {(job.perks ?? []).map(p => <span key={p} style={{ fontSize: 12, padding: '5px 12px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>âœ… {p}</span>)}
+            {(job.perks ?? []).map(p => <span key={p} style={{ fontSize: 12, padding: '5px 12px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>✅ {p}</span>)}
           </div>
         </section>
 
@@ -749,9 +749,9 @@ function JobDrawer({ job, onClose, onApply, saved, onToggleSave, hasApplied }: {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Job Card
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function JobCard({ job, onClick, saved, onToggleSave, index, hasApplied }: {
   job: Job; onClick: () => void; saved: boolean; onToggleSave: (e: React.MouseEvent) => void; index: number; hasApplied: boolean;
 }) {
@@ -775,8 +775,8 @@ function JobCard({ job, onClick, saved, onToggleSave, index, hasApplied }: {
             <div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 1 }}>
                 <h3 style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--text)' }}>{job.title}</h3>
-                {job.urgent && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#ef444420', color: '#ef4444', padding: '2px 7px', borderRadius: 99 }}>ðŸ”¥ URGENT</span>}
-                {job.featured && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 7px', borderRadius: 99 }}>â­ Featured</span>}
+                {job.urgent && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#ef444420', color: '#ef4444', padding: '2px 7px', borderRadius: 99 }}>🔥 URGENT</span>}
+                {job.featured && <span style={{ fontSize: 9.5, fontWeight: 700, background: '#f59e0b18', color: '#f59e0b', padding: '2px 7px', borderRadius: 99 }}>⭐ Featured</span>}
               </div>
               <p style={{ fontSize: 12.5, fontWeight: 600, color: job.color }}>{job.company}</p>
             </div>
@@ -815,9 +815,9 @@ function JobCard({ job, onClick, saved, onToggleSave, index, hasApplied }: {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Main Page
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 export default function JobPortalPage() {
   const { user, token } = useAuth();
   const [q, setQ] = useState('');
@@ -866,9 +866,9 @@ export default function JobPortalPage() {
     let list = [...JOBS, ...portalJobs];
     if (tab === 'saved') list = list.filter(j => savedIds.has(j.id));
     if (q) list = list.filter(j =>
-      j.title.toLowerCase().includes(q.toLowerCase()) ||
-      j.company.toLowerCase().includes(q.toLowerCase()) ||
-      j.skills.some(s => s.toLowerCase().includes(q.toLowerCase()))
+      (j.title || '').toLowerCase().includes(q.toLowerCase()) ||
+      (j.company || '').toLowerCase().includes(q.toLowerCase()) ||
+      (j.skills || []).some(s => (s || '').toLowerCase().includes(q.toLowerCase()))
     );
     if (category !== 'All') list = list.filter(j => j.category === category);
     if (jobType !== 'All Types') list = list.filter(j => j.type === jobType);
@@ -884,7 +884,7 @@ export default function JobPortalPage() {
   return (
     <div className="page" style={{ minHeight: '100vh', paddingTop: 60 }}>
 
-      {/* â”€â”€ HERO â”€â”€ */}
+      {/* ── HERO ── */}
       <div className="banner" style={{ background: 'linear-gradient(180deg,rgba(6,10,20,0.95) 0%,transparent 100%)' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 100% at 20% 50%,rgba(124,58,237,0.13),transparent)' }} />
         <div className="mesh-bg" style={{ position: 'absolute', inset: 0, opacity: 0.3 }} />
@@ -921,7 +921,7 @@ export default function JobPortalPage() {
 
       <div className="container" style={{ paddingTop: 24, paddingBottom: 80 }}>
 
-        {/* â”€â”€ MAIN TABS â”€â”€ */}
+        {/* ── MAIN TABS ── */}
         <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 5, marginBottom: 24, width: 'fit-content' }}>
           {[
             { id: 'jobs', label: 'Browse Jobs', icon: <Search size={14} /> },
@@ -935,10 +935,10 @@ export default function JobPortalPage() {
           ))}
         </div>
 
-        {/* â”€â”€ APPLICATIONS PANEL â”€â”€ */}
+        {/* ── APPLICATIONS PANEL ── */}
         {tab === 'applications' && <MyApplications token={token} />}
 
-        {/* â”€â”€ JOBS / SAVED PANEL â”€â”€ */}
+        {/* ── JOBS / SAVED PANEL ── */}
         {(tab === 'jobs' || tab === 'saved') && (
           <>
             {/* Search & filters */}
@@ -950,7 +950,7 @@ export default function JobPortalPage() {
                 </div>
                 <button onClick={() => setShowFilters(p => !p)}
                   style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 18px', height: 44, borderRadius: 12, border: `1.5px solid ${showFilters ? 'var(--accent)' : 'var(--border)'}`, background: showFilters ? 'rgba(124,58,237,0.1)' : 'var(--surface)', color: showFilters ? 'var(--accent)' : 'var(--text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}>
-                  <SlidersHorizontal size={14} /> Filters {showFilters ? 'â–²' : 'â–¼'}
+                  <SlidersHorizontal size={14} /> Filters {showFilters ? '▲' : '▼'}
                 </button>
               </div>
 
@@ -991,7 +991,7 @@ export default function JobPortalPage() {
               <p style={{ fontSize: 13, color: 'var(--text-3)' }}><span style={{ color: 'var(--text)', fontWeight: 700 }}>{filtered.length}</span> jobs found</p>
               {appliedIds.size > 0 && (
                 <button onClick={() => setTab('applications')} style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent-light)', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 99, padding: '4px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <ClipboardList size={12} /> {appliedIds.size} application{appliedIds.size > 1 ? 's' : ''} â†’ Track
+                  <ClipboardList size={12} /> {appliedIds.size} application{appliedIds.size > 1 ? 's' : ''} → Track
                 </button>
               )}
             </div>
@@ -1018,7 +1018,7 @@ export default function JobPortalPage() {
               style={{ marginTop: 44, background: 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(79,70,229,0.07))', border: '1px solid rgba(124,58,237,0.22)', borderRadius: 20, padding: '24px 28px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
               <div style={{ width: 48, height: 48, borderRadius: 13, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Bell size={22} color="#fff" /></div>
               <div style={{ flex: 1, minWidth: 180 }}>
-                <h3 style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--text)', marginBottom: 3 }}>ðŸ”” Get Job Alerts</h3>
+                <h3 style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--text)', marginBottom: 3 }}>🔔 Get Job Alerts</h3>
                 <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Be first to know about new jobs matching your profile.</p>
               </div>
               {alertSent ? (
@@ -1050,7 +1050,7 @@ export default function JobPortalPage() {
         )}
       </div>
 
-      {/* â”€â”€ DRAWER â”€â”€ */}
+      {/* ── DRAWER ── */}
       <AnimatePresence>
         {activeJob && (
           <>
@@ -1077,7 +1077,7 @@ export default function JobPortalPage() {
         )}
       </AnimatePresence>
 
-      {/* Portal job apply modal â†’ saves to localStorage */}
+      {/* Portal job apply modal → saves to localStorage */}
       <PortalApplyModal
         open={!!portalApplyJob}
         onClose={() => setPortalApplyJob(null)}

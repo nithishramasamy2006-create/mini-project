@@ -135,7 +135,7 @@ export default function App() {
                     <Route path="/internships"       element={<RoleRoute element={<InternshipsPage />} />} />
                     <Route path="/mentors"           element={<RoleRoute element={<MentorsPage />} />} />
                     <Route path="/leaderboard"       element={<RoleRoute element={<LeaderboardPage />} />} />
-                    <Route path="/certificates"      element={<RoleRoute element={<CertificatePage />} />} />
+                    <Route path="/certificates"      element={<CertificatePage />} />
                     <Route path="/how-it-works"      element={<RoleRoute element={<HowItWorksPage />} />} />
                     <Route path="/placement-support" element={<RoleRoute element={<PlacementSupportPage />} />} />
                     <Route path="/alumni-network"    element={<RoleRoute element={<AlumniNetworkPage />} />} />
